@@ -45,8 +45,28 @@ fn main() {
     println!("{}", lerp((1.5, 2.0), &v ));
 
 
+    let u = vec![vec![1.0, 1.0, 1.0, 1.0],
+                 vec![1.0, 1.0, 1.0, 1.0],
+                 vec![1.0, 1.0, 1.0, 1.0],
+                 vec![1.0, 1.0, 1.0, 1.0],
+                ];
+
+    let u1 = vec![vec![0.0, 0.0, 0.0, 0.0],
+                  vec![0.0, 0.0, 0.0, 0.0],
+                  vec![0.0, 0.0, 0.0, 0.0],
+                  vec![0.0, 0.0, 0.0, 0.0],
+                ];
+
+
+    let u_v = Variable::new(u, 0.0, 0.0);
+    let u1_v = Variable::new(u1, 0.0, 0.0);
+
     let v = Variable::new(v, 0.0, 0.0);
     println!("{}", v.interpolate_2d(1.5, 2.0));
+
+    let (px, py) = v.integrate(2.0, 2.0, &u_v, &u1_v, 0.01);
+
+    println!("{}, {}", px, py);
 
     //v.integrate()
 
