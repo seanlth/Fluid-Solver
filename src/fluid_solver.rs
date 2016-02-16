@@ -1,5 +1,6 @@
 use std::mem::swap;
 
+use linear_solvers;
 
 
 pub fn matrix(row: i32, column: i32) -> Vec<Vec<f64>> {
@@ -23,7 +24,7 @@ pub fn matrix(row: i32, column: i32) -> Vec<Vec<f64>> {
 // }
 
 
-
+#[derive(Clone)]
 pub struct Variable {
 	values: Vec<Vec<f64>>,
 	temp: Vec<Vec<f64>>,
@@ -118,10 +119,12 @@ impl Variable {
 
 
 pub struct FluidSolver {
-	pressure: Variable,
 	velocity_x: Variable,
 	velocity_y: Variable,
 	density: Variable,
+	divergence: Vec<f64>,
+	pressure: Vec<f64>,
+	fluid_density: f64,
 	rows: i32,
 	columns: i32,
 	dt: f64,
@@ -129,12 +132,14 @@ pub struct FluidSolver {
 }
 
 impl FluidSolver {
-	pub fn new(rows: i32, columns: i32, dt: f64, dx: f64) -> FluidSolver {
+	pub fn new(fluid_density: f64, rows: i32, columns: i32, dt: f64, dx: f64) -> FluidSolver {
  		FluidSolver {
- 			pressure: Variable::new_zeroed(rows, columns, 0.5, 0.5),
  			velocity_x: Variable::new_zeroed(rows, columns, 0.5, 0.5),
  			velocity_y: Variable::new_zeroed(rows, columns, 0.5, 0.5),
 			density: Variable::new_zeroed(rows, columns, 0.5, 0.5),
+			pressure: vec![0.0; (rows*columns) as usize],
+			divergence: vec![0.0; (rows*columns) as usize],
+			fluid_density: fluid_density,
  			rows: rows,
  			columns: columns,
 			dt: dt,
@@ -142,34 +147,83 @@ impl FluidSolver {
  		}
  	}
 
-	pub fn solve(&mut self) {
 
+
+	//      0        1        2
+	//   0  1  2  0  1  2  0  1  2
+	//   0  1  2  3  4  5  6  7  8
+	//
+	//1  4 -1  0 -1  0  0  0  0  0
+	//2 -1  4 -1  0 -1  0  0  0  0
+	//3  0 -1  4  0  0 -1  0  0  0
+	//1 -1  0  0  4 -1  0 -1  0  0
+    //2  0 -1  0 -1  4 -1  0 -1  0
+	//3  0  0 -1  0 -1  4  0  0 -1
+	//1  0  0  0 -1  0  0  4 -1  0
+	//2  0  0  0  0 -1  0 -1  4 -1
+	//3  0  0  0  0  0 -1  0 -1  4
+
+	pub fn laplacian(r: i32, c: i32, n: i32) -> f64 {
+		let c_x = r % n;
+		let c_y = r / n;
+
+		let x = c % n;
+		let y = c / n;
+
+		if c_x == x && c_y == y { 4.0 }
+		else if (c_x - x).abs() + (c_y - y).abs() == 1 { -1.0 }
+		else { 0.0 }
 	}
 
-	pub fn jacobi(&mut self) {
-		let limit = 200;
-
-		let epsilon = 0.001;
-		let mut a = 0.0;
-
-		for k in 0..limit {
-			for i in 0..self.rows {
-				for j in 0..self.columns {
-
-				}
-			}
-
-			if a < epsilon {
-				break;
-			}
-		}
+	pub fn solve(&mut self) {
 
 	}
 
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
+		linear_solvers::gauss_seidel( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.rows*self.columns );
+	}
+
+	pub fn advect(&mut self) {
+
+		let u = self.velocity_x.clone();
+		let v = self.velocity_x.clone();
+		self.velocity_x.advect(&u, &v, self.dt);
+		self.velocity_y.advect(&u, &v, self.dt);
+		self.density.advect(&u, &v, self.dt);
+
+		swap(&mut self.velocity_x.values, &mut self.velocity_x.temp);
+		swap(&mut self.velocity_y.values, &mut self.velocity_y.temp);
+		swap(&mut self.density.values, &mut self.density.temp);
+	}
+
+	pub fn project(&mut self) {
+		self.pressure_solve();
+
+		for i in 1..self.rows-1 {
+			for j in 1..self.columns-1 {
+				let p = i * self.columns + j;
+				self.velocity_x.values[i as usize][j as usize] = self.velocity_x.values[i as usize][j as usize] - (self.dt / self.fluid_density) * ( self.pressure[p as usize] - self.pressure[p as usize - 1] );
+				self.velocity_y.values[i as usize][j as usize] = self.velocity_y.values[i as usize][j as usize] - (self.dt / self.fluid_density) * ( self.pressure[p as usize] - self.pressure[(p - self.columns) as usize] );
+			}
+		}
+
+		// can be handled in pressure 
+		for i in 0..self.rows {
+			self.velocity_x.values[i as usize][0] = 0.0;
+			self.velocity_x.values[i as usize][self.columns as usize-1] = 0.0;
+		}
+		for i in 0..self.columns {
+			self.velocity_x.values[i as usize][0] = 0.0;
+			self.velocity_x.values[i as usize][self.rows as usize - 1] = 0.0;
+
+		}
 
 	}
+
+
+
+
 
 }
