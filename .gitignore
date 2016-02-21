@@ -1,2 +1,7 @@
 target
 .DS_Store
+density.png
+liblodepng.a
+liblodepng.o
+lodepng.c
+lodepng.h

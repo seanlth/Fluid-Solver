@@ -5,3 +5,9 @@ authors = ["hargados <hargados@tcd.ie>"]
 
 [dependencies]
 glium = "0.13.5"
+
+[dependencies.lodepng]
+path = "/Users/Seanlth/Projects/Rust/lodepng-rust"
+
+[profile.dev]
+debug = true   # Controls whether the compiler passes `-g`

@@ -1,4 +1,5 @@
 extern crate Fluids;
+extern crate lodepng;
 
 use Fluids::fluid_solver::*;
 use Fluids::linear_solvers;
@@ -110,18 +111,47 @@ fn b(c: i32) -> f64 {
 
 fn main() {
 
+    let mut solver = FluidSolver::new(1.0, 100, 100, 0.01, 1.0);
+
+
+
+    for i in 0..100 {
+        for j in 0..100 {
+            solver.set_flow(i, j, 100.0, 0.0, 0.0);
+
+            // let x = i as f64 / 2.0;
+            // let y = j as f64 / 2.0;
+            //
+            // //println!("{}, {}", x, y);
+            //
+            //
+            //print!( "{:.*} ", 2, solver.density.interpolate_2d(x, y) );
+        }
+        println!("");
+    }
+    solver.set_flow(5, 2, 100.0, 0.0, 255.0);
+
+
+    solver.solve();
+
+
+    //FluidSolver::print_variable(&solver.density);
+    //
+    solver.density_image();
+
+
     //let mut result: Vec<f64> = vec![0.0, 0.0];
 
     //let _ = linear_solvers::jacobi(A, &mut result, b, 2);
     //println!("{}, {}", result[0], result[1]);
 
-    for i in 0..16 {
-        for j in 0..16 {
-            let f = FluidSolver::laplacian(i, j, 4);
-            print!("{} ", f);
-        }
-        println!("");
-    }
+    // for i in 0..16 {
+    //     for j in 0..16 {
+    //         let f = FluidSolver::laplacian(i, j, 4);
+    //         print!("{} ", f);
+    //     }
+    //     println!("");
+    // }
 
 
 
