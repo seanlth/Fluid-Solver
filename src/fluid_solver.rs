@@ -66,9 +66,13 @@ impl Variable {
 	// interpolate across the field
 	pub fn interpolate_2d(&self, mut x: f64, mut y: f64) -> f64 {
 
+		//println!("x = {}", x);
+
 		// adjust coordinates to relative to variable space
 		x = x - self.offset_x;
 		y = y - self.offset_y;
+
+		//println!("x = {}", x);
 
 		if x == 0.5 && y == 4.5 {
 		// println!("{}", x);
@@ -79,22 +83,25 @@ impl Variable {
 		x = self.clamp(x, 0.0, self.values[0].len() as f64 - 1.0);
 		y = self.clamp(y, 0.0, self.values.len() as f64 - 1.0);
 
+		//println!("{}", x);
+
 		// points to consider in interpolation
 		// p1 - - - p2
 		// |        |
 		// |   p    |
 		// |        |
 		// p3 - - - p4
-	    let (p1_x, p1_y) = ( (x+1.0).floor(), y.floor() );
-	    let (p2_x, p2_y) = ( x.floor(), y.floor() );
-	    let (p3_x, p3_y) = ( (x+1.0).floor(), (y+1.0).floor() );
-	    let (p4_x, p4_y) = ( x.floor(), (y+1.0).floor() );
+	    let (p1_x, p1_y) = ( self.clamp((x+1.0).floor(), 0.0, self.values[0].len() as f64 - 1.0), self.clamp(y.floor(), 0.0, self.values.len() as f64 - 1.0) );
+	    let (p2_x, p2_y) = ( self.clamp(x.floor(), 0.0, self.values[0].len() as f64 - 1.0), self.clamp(y.floor(), 0.0, self.values.len() as f64 - 1.0) );
+	    let (p3_x, p3_y) = ( self.clamp((x+1.0).floor(), 0.0, self.values[0].len() as f64 - 1.0), self.clamp((y+1.0).floor(), 0.0, self.values.len() as f64 - 1.0) );
+	    let (p4_x, p4_y) = ( self.clamp(x.floor(), 0.0, self.values[0].len() as f64 - 1.0), self.clamp((y+1.0).floor(), 0.0, self.values.len() as f64 - 1.0) );
 
 		//if x == 0.5 && y == 4.5 {
-			// println!("{}, {}", p1_x, p1_y);
-			// println!("{}, {}", p2_x, p2_y);
-			// println!("{}, {}", p3_x, p3_y);
-			// println!("{}, {}", p4_x, p4_y);
+			// println!("x = {}, y = {}", x, y);
+			// println!("p1 = {}, {}", p1_x, p1_y);
+			// println!("p2 = {}, {}", p2_x, p2_y);
+			// println!("p3 = {}, {}", p3_x, p3_y);
+			// println!("p4 = {}, {}", p4_x, p4_y);
 		//}
 
  		// weight from 0 to 1 in x and y axis
@@ -144,6 +151,7 @@ impl Variable {
 
 		let new_x = x as f64 - u_p * dt;
 		let new_y = y as f64 - v_p * dt;
+		//let new_y = y as f64;
 
 		//println!("{}, {} ", u_p, v_p);
 		// println!("{}, {} ", x, y);
@@ -157,8 +165,8 @@ impl Variable {
 		let w = self.values[0].len();
 		let h = self.values.len();
 
-		for r in 0..h-1 {
-			for c in 0..w-1 {
+		for r in 0..h {
+			for c in 0..w {
 				// integrate from location of variable within grid
 				let (old_x, old_y) = self.integrate(c as f64 + self.offset_x, r as f64 + self.offset_y, &u, &v, dt);
 
@@ -166,8 +174,6 @@ impl Variable {
 
 				//println!("{}, {} -> {}, {}", old_x, old_y, c as f64 + self.offset_x, r as f64 + self.offset_y);
 				self.temp[r][c] = self.interpolate_2d(old_x, old_y);
-				//println!("{}", self.temp[r][c]);
-				//println!("{}, {}", r, c);
 			}
 		}
 	}
@@ -176,7 +182,7 @@ impl Variable {
 
 pub struct FluidSolver {
 	pub velocity_x: Variable,
-	velocity_y: Variable,
+	pub velocity_y: Variable,
 	pub density: Variable,
 	divergence: Vec<f64>,
 	pressure: Vec<f64>,
@@ -234,12 +240,14 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::gauss_seidel( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.rows*self.columns );
+		//linear_solvers::jacobi( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns*self.rows );
+		linear_solvers::relaxation( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows );
+		//linear_solvers::relax(FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows);
 	}
 
 	pub fn solve(&mut self) {
+		self.project();
 		self.advect();
-		//self.project();
 	}
 
 	pub fn advect(&mut self) {
@@ -255,9 +263,20 @@ impl FluidSolver {
 		swap(&mut self.density.values, &mut self.density.temp);
 	}
 
+	pub fn calculate_divergence(&mut self) {
+		for i in 0..self.rows {
+			for j in 0..self.columns {
+				let d = i * self.columns + j;
+				self.divergence[d as usize] = -(self.velocity_x.values[i as usize][j as usize + 1] - self.velocity_x.values[i as usize][j as usize] + self.velocity_y.values[i as usize + 1][j as usize] - self.velocity_y.values[i as usize][j as usize]) / self.dx;
+			}
+		}
+	}
+
 	pub fn project(&mut self) {
+		self.calculate_divergence();
 		self.pressure_solve();
 
+		// apply pressure to velocity
 		for i in 1..self.rows-1 {
 			for j in 1..self.columns-1 {
 				let p = i * self.columns + j;
@@ -266,20 +285,21 @@ impl FluidSolver {
 			}
 		}
 
+		// boundary conditions
 		// can be handled in pressure
 		for i in 0..self.rows {
 			self.velocity_x.values[i as usize][0] = 0.0;
 			self.velocity_x.values[i as usize][self.columns as usize-1] = 0.0;
 		}
 		for i in 0..self.columns {
-			self.velocity_x.values[i as usize][0] = 0.0;
-			self.velocity_x.values[i as usize][self.rows as usize - 1] = 0.0;
+			self.velocity_x.values[0][ i as usize ] = 0.0;
+			self.velocity_x.values[self.rows as usize - 1 ][i as usize] = 0.0;
 		}
 	}
 
-	pub fn set_flow(&mut self, r: i32, c: i32, velocity_x: f64, velocty_y: f64, density: f64) {
-		self.velocity_x.values[r as usize][c as usize] = velocity_x;
-		self.velocity_y.values[r as usize][c as usize] = velocty_y;
+	pub fn add_source(&mut self, r: i32, c: i32, velocity_x: f64, velocty_y: f64, density: f64) {
+		self.velocity_x.values[r as usize][c as usize+1] = velocity_x;
+		self.velocity_y.values[r as usize+1][c as usize] = velocty_y;
 		self.density.values[r as usize][c as usize] = density;
 	}
 
@@ -292,16 +312,50 @@ impl FluidSolver {
 		}
 	}
 
-	pub fn density_image(&self) {
+	pub fn print_velocity(&self) {
+		println!("{{");
+		for i in 0..self.rows {
+			for j in 0..self.columns {
+				let v = format!("{}, {}", self.velocity_x.values[i as usize][j as usize], self.velocity_y.values[i as usize][j as usize] );
+				let p = format!("{}, {}", j, i );
+
+				print!("{{ {{ {} }}, {{ {} }} }}, ", p, v);
+			}
+		}
+		println!("}}");
+	}
+
+	pub fn print_divergence(&self) {
+		for i in (0..self.rows).rev() {
+			for j in 0..self.columns {
+				print!("{:.*}, ", 2, self.divergence[ (i * self.columns + j) as usize ]);
+			}
+			println!("");
+		}
+		println!("");
+	}
+
+	pub fn print_pressure(&self) {
+		for i in (0..self.rows).rev() {
+			for j in 0..self.columns {
+				print!("{:.*}, ", 2, self.pressure[ (i * self.columns + j) as usize ]);
+			}
+			println!("");
+		}
+		println!("");
+	}
+
+
+	pub fn variable_image(v: &Variable, name: &str) {
 		let mut temp = vec![];
-		for i in self.density.values.iter().rev() {
+		for i in v.values.iter().rev() {
 			for j in i {
 				temp.push(*j as u8);
 				temp.push(*j as u8);
 				temp.push(*j as u8);
 			}
 		}
-		lodepng::encode_file("density.png", &temp, self.columns as usize, self.rows as usize, lodepng::LCT_RGB, 8);
+		let _ = lodepng::encode_file(name, &temp, v.values[0].len() as usize, v.values.len() as usize, lodepng::LCT_RGB, 8);
 	}
 
 

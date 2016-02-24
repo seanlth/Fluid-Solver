@@ -111,33 +111,56 @@ fn b(c: i32) -> f64 {
 
 fn main() {
 
-    let mut solver = FluidSolver::new(1.0, 100, 100, 0.01, 1.0);
+    let mut solver = FluidSolver::new(1.0, 11, 11, 0.01, 1.0);
+
+
+    // solver.set_flow(5, 0, 100.0, 0.0, 0.0);
+    // solver.set_flow(5, 1, 100.0, 0.0, 0.0);
+    // solver.set_flow(5, 2, 100.0, 0.0, 0.0);
 
 
 
-    for i in 0..100 {
-        for j in 0..100 {
-            solver.set_flow(i, j, 100.0, 0.0, 0.0);
+    //solver.set_flow(5, 2, 0.0, 0.0, 255.0);
 
-            // let x = i as f64 / 2.0;
-            // let y = j as f64 / 2.0;
-            //
-            // //println!("{}, {}", x, y);
-            //
-            //
-            //print!( "{:.*} ", 2, solver.density.interpolate_2d(x, y) );
-        }
-        println!("");
+    solver.add_source(5, 2, 500.0, 0.0, 0.0);
+
+    for i in 0..200 {
+        solver.solve();
+        //FluidSolver::print_variable(&solver.velocity_x);
     }
-    solver.set_flow(5, 2, 100.0, 0.0, 255.0);
+    //solver.print_velocity();
+    //solver.calculate_divergence();
+    //solver.print_divergence();
+    //solver.project();
 
 
-    solver.solve();
+    // solver.print_pressure();
+    //solver.calculate_divergence();
+    //solver.print_divergence();
+
+    // solver.solve();
+    solver.calculate_divergence();
+    solver.print_divergence();
+    //FluidSolver::print_variable(&solver.velocity_x);
+
+    solver.print_velocity();
+
+    //solver.solve();
+    //solver.solve();
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
+    //solver.solve();
 
 
-    //FluidSolver::print_variable(&solver.density);
+    //FluidSolver::print_variable(&solver.velocity_x);
     //
-    solver.density_image();
+
+    // FluidSolver::variable_image(&solver.velocity_x, "velocity_x");
+    // FluidSolver::variable_image(&solver.velocity_y, "velocity_y");
 
 
     //let mut result: Vec<f64> = vec![0.0, 0.0];
