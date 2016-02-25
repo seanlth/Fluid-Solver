@@ -140,7 +140,7 @@ pub fn relaxation(a: fn(i32, i32, i32) -> f64, x: &mut Vec<f64>, b: &Vec<f64>, w
 
             //println!("{} ", b[i as usize]);
 
-            temp[i as usize] = ( b[i as usize] + p1 + p2 + p3 + p4 ) / (4.0 * (0.01 / ( 1.0 * 1.0 * 1.0 ))); 
+            temp[i as usize] = ( b[i as usize] + p1 + p2 + p3 + p4 ) / (4.0 * (0.01 / ( 0.1 * 0.1 * 0.1 )));
         }
         *x = temp.clone();
     }

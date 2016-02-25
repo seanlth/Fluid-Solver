@@ -1,6 +1,8 @@
 extern crate lodepng;
 
 use std::mem::swap;
+use std::io::prelude::*;
+use std::fs::File;
 
 use linear_solvers;
 
@@ -242,7 +244,6 @@ impl FluidSolver {
 	pub fn pressure_solve(&mut self) {
 		//linear_solvers::jacobi( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns*self.rows );
 		linear_solvers::relaxation( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows );
-		//linear_solvers::relax(FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows);
 	}
 
 	pub fn solve(&mut self) {
@@ -277,11 +278,27 @@ impl FluidSolver {
 		self.pressure_solve();
 
 		// apply pressure to velocity
-		for i in 1..self.rows-1 {
-			for j in 1..self.columns-1 {
+		for i in 0..self.rows+1 {
+			for j in 0..self.columns+1 {
 				let p = i * self.columns + j;
-				self.velocity_x.values[i as usize][j as usize] = self.velocity_x.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( self.pressure[p as usize] - self.pressure[p as usize - 1] );
-				self.velocity_y.values[i as usize][j as usize] = self.velocity_y.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( self.pressure[p as usize] - self.pressure[(p - self.columns) as usize] );
+
+				// println!("{}", p);
+				// println!("{}", j);
+				// println!("{}", i);
+
+				let p1 = if j < self.columns && i < self.rows { self.pressure[ p as usize ] } else { 0.0 };
+				let p2 = if i < self.rows && j < self.columns { self.pressure[ p as usize ] } else { 0.0 };
+
+				let p3 = if j - 1 >= 0 && i < self.rows { self.pressure[ p as usize - 1 ] } else { 0.0 };
+				let p4 = if i - 1 >= 0 && j < self.columns { self.pressure[ (p - self.columns) as usize ] } else { 0.0 };
+
+
+				if j <= self.columns && i < self.rows {
+					self.velocity_x.values[i as usize][j as usize] = self.velocity_x.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( p1- p3 );
+				}
+				if j < self.columns && i <= self.rows {
+					self.velocity_y.values[i as usize][j as usize] = self.velocity_y.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( p2 - p4 );
+				}
 			}
 		}
 
@@ -289,11 +306,11 @@ impl FluidSolver {
 		// can be handled in pressure
 		for i in 0..self.rows {
 			self.velocity_x.values[i as usize][0] = 0.0;
-			self.velocity_x.values[i as usize][self.columns as usize-1] = 0.0;
+			self.velocity_x.values[i as usize][self.columns as usize] = 0.0;
 		}
 		for i in 0..self.columns {
-			self.velocity_x.values[0][ i as usize ] = 0.0;
-			self.velocity_x.values[self.rows as usize - 1 ][i as usize] = 0.0;
+			self.velocity_y.values[0][ i as usize ] = 0.0;
+			self.velocity_y.values[self.rows as usize][i as usize] = 0.0;
 		}
 	}
 
@@ -343,6 +360,31 @@ impl FluidSolver {
 			println!("");
 		}
 		println!("");
+	}
+
+	pub fn write_velocity(&self) {
+		let mut f = File::create("data.dat").unwrap();
+
+		let mut data = String::new();
+		//data = data + "{";
+
+		for i in 0..self.rows {
+			for j in 0..self.columns {
+				let v = format!("{} {}", self.velocity_x.values[i as usize][j as usize], self.velocity_y.values[i as usize][j as usize] );
+				let p = format!("{} {}", j, i );
+
+				data = data + &*format!("{} {} ", p, v);
+			}
+		}
+		//
+		// for i in 0..self.rows {
+		// 	for j in 0..self.columns {
+		// 		let p = format!("{} {}", j, i );
+		// 		data = data + &*format!("{} ", p);
+		// 	}
+		// }
+
+		let _ = f.write_all(data.as_bytes());
 	}
 
 

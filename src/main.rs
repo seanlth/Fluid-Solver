@@ -111,7 +111,7 @@ fn b(c: i32) -> f64 {
 
 fn main() {
 
-    let mut solver = FluidSolver::new(1.0, 11, 11, 0.01, 1.0);
+    let mut solver = FluidSolver::new(1.0, 11, 11, 0.01, 0.1);
 
 
     // solver.set_flow(5, 0, 100.0, 0.0, 0.0);
@@ -120,11 +120,16 @@ fn main() {
 
 
 
-    //solver.set_flow(5, 2, 0.0, 0.0, 255.0);
+    solver.add_source(5, 5, 700.0, 0.0, 0.0);
 
-    solver.add_source(5, 2, 500.0, 0.0, 0.0);
+    // for i in 0..11 {
+    //     for j in 0..11 {
+    //         solver.add_source(i, j, 500.0, 0.0, 0.0);
+    //     }
+    // }
 
-    for i in 0..200 {
+
+    for i in 0..1000 {
         solver.solve();
         //FluidSolver::print_variable(&solver.velocity_x);
     }
@@ -139,11 +144,13 @@ fn main() {
     //solver.print_divergence();
 
     // solver.solve();
-    solver.calculate_divergence();
-    solver.print_divergence();
+    //solver.calculate_divergence();
+    //solver.print_divergence();
     //FluidSolver::print_variable(&solver.velocity_x);
 
-    solver.print_velocity();
+    //solver.print_velocity();
+
+    solver.write_velocity();
 
     //solver.solve();
     //solver.solve();
