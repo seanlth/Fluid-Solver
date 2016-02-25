@@ -242,8 +242,7 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		//linear_solvers::jacobi( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns*self.rows );
-		linear_solvers::relaxation( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows );
+		linear_solvers::relaxation( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 100 );
 	}
 
 	pub fn solve(&mut self) {
@@ -281,10 +280,6 @@ impl FluidSolver {
 		for i in 0..self.rows+1 {
 			for j in 0..self.columns+1 {
 				let p = i * self.columns + j;
-
-				// println!("{}", p);
-				// println!("{}", j);
-				// println!("{}", i);
 
 				let p1 = if j < self.columns && i < self.rows { self.pressure[ p as usize ] } else { 0.0 };
 				let p2 = if i < self.rows && j < self.columns { self.pressure[ p as usize ] } else { 0.0 };

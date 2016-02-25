@@ -111,7 +111,7 @@ fn b(c: i32) -> f64 {
 
 fn main() {
 
-    let mut solver = FluidSolver::new(1.0, 11, 11, 0.01, 0.1);
+    let mut solver = FluidSolver::new(1.0, 101, 101, 0.01, 0.1);
 
 
     // solver.set_flow(5, 0, 100.0, 0.0, 0.0);
@@ -120,7 +120,7 @@ fn main() {
 
 
 
-    solver.add_source(5, 5, 700.0, 0.0, 0.0);
+    solver.add_source(2, 5, 700.0, 0.0, 0.0);
 
     // for i in 0..11 {
     //     for j in 0..11 {

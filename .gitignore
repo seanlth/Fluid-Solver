@@ -5,4 +5,4 @@ liblodepng.a
 liblodepng.o
 lodepng.c
 lodepng.h
-.png
+*.dat
