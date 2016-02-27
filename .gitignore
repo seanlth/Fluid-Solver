@@ -6,3 +6,4 @@ liblodepng.o
 lodepng.c
 lodepng.h
 *.dat
+images/

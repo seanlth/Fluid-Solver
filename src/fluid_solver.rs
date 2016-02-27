@@ -5,6 +5,7 @@ use std::io::prelude::*;
 use std::fs::File;
 
 use linear_solvers;
+use integrators;
 
 pub fn matrix(row: i32, column: i32) -> Vec<Vec<f64>> {
 	let mut t: Vec<Vec<f64>> = Vec::new();
@@ -30,7 +31,7 @@ pub fn matrix(row: i32, column: i32) -> Vec<Vec<f64>> {
 #[derive(Clone)]
 pub struct Variable {
 	pub values: Vec<Vec<f64>>,
-	temp: Vec<Vec<f64>>,
+	pub temp: Vec<Vec<f64>>,
 	offset_x: f64,
 	offset_y: f64,
 }
@@ -186,6 +187,7 @@ pub struct FluidSolver {
 	pub velocity_x: Variable,
 	pub velocity_y: Variable,
 	pub density: Variable,
+	pub particles: Vec<(f64, f64)>,
 	divergence: Vec<f64>,
 	pressure: Vec<f64>,
 	fluid_density: f64,
@@ -197,10 +199,20 @@ pub struct FluidSolver {
 
 impl FluidSolver {
 	pub fn new(fluid_density: f64, rows: i32, columns: i32, dt: f64, dx: f64) -> FluidSolver {
+
+		let mut particles = Vec::new();
+
+		for i in 0..rows*10 {
+			for j in 0..columns*10 {
+				particles.push( (i as f64 * dx / 10.0, j as f64*dx / 10.0 ) );
+			}
+		}
+
  		FluidSolver {
  			velocity_x: Variable::new_zeroed(rows, columns+1, 0.0, 0.5),
  			velocity_y: Variable::new_zeroed(rows+1, columns, 0.5, 0.0),
 			density: Variable::new_zeroed(rows, columns, 0.5, 0.5),
+			particles: particles,
 			pressure: vec![0.0; (rows*columns) as usize],
 			divergence: vec![0.0; (rows*columns) as usize],
 			fluid_density: fluid_density,
@@ -242,12 +254,23 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::relaxation( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 100 );
+		linear_solvers::relaxation( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 70 );
 	}
 
 	pub fn solve(&mut self) {
 		self.project();
 		self.advect();
+	}
+
+	pub fn advect_particles(&mut self) {
+
+		for p in &mut self.particles {
+			let (x, y) = *p;
+			let u = self.velocity_x.interpolate_2d(x, y);
+			let v = self.velocity_y.interpolate_2d(x, y);
+			*p = integrators::integrate(x, y, u, v, self.dt);
+		}
+
 	}
 
 	pub fn advect(&mut self) {
@@ -257,6 +280,8 @@ impl FluidSolver {
 		self.velocity_x.advect(&u, &v, self.dt);
 		self.velocity_y.advect(&u, &v, self.dt);
 		self.density.advect(&u, &v, self.dt);
+
+		self.advect_particles();
 
 		swap(&mut self.velocity_x.values, &mut self.velocity_x.temp);
 		swap(&mut self.velocity_y.values, &mut self.velocity_y.temp);
@@ -311,7 +336,9 @@ impl FluidSolver {
 
 	pub fn add_source(&mut self, r: i32, c: i32, velocity_x: f64, velocty_y: f64, density: f64) {
 		self.velocity_x.values[r as usize][c as usize+1] = velocity_x;
+		self.velocity_x.values[r as usize][c as usize-1] = velocity_x;
 		self.velocity_y.values[r as usize+1][c as usize] = velocty_y;
+		self.velocity_y.values[r as usize-1][c as usize] = velocty_y;
 		self.density.values[r as usize][c as usize] = density;
 	}
 

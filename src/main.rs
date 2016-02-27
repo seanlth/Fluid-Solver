@@ -3,6 +3,7 @@ extern crate lodepng;
 
 use Fluids::fluid_solver::*;
 use Fluids::linear_solvers;
+use Fluids::visualiser::Visualiser;
 
 //p1---p2
 //|    |
@@ -111,16 +112,23 @@ fn b(c: i32) -> f64 {
 
 fn main() {
 
-    let mut solver = FluidSolver::new(1.0, 101, 101, 0.01, 0.1);
+    // let visualiser = Visualiser::new();
+
+    let mut solver = FluidSolver::new(1.0, 101, 101, 0.05, 1.0);
 
 
     // solver.set_flow(5, 0, 100.0, 0.0, 0.0);
     // solver.set_flow(5, 1, 100.0, 0.0, 0.0);
     // solver.set_flow(5, 2, 100.0, 0.0, 0.0);
 
+    for i in 0..11 {
+        for j in 0..11 {
+            //solver.add_source(i, j, 0.0, 0.0, 100.0);
+        }
+    }
 
+    //solver.add_source(5, 5, 100.0, 0.0, 0.0);
 
-    solver.add_source(2, 5, 700.0, 0.0, 0.0);
 
     // for i in 0..11 {
     //     for j in 0..11 {
@@ -128,11 +136,39 @@ fn main() {
     //     }
     // }
 
+    //println!("{:?}", solver.particles);
 
-    for i in 0..1000 {
+    //solver.add_source(50, 5, 100.0, 0.0, 500.0);
+
+
+    for i in 0..10000 {
+        solver.add_source(49, 1, 100.0, 0.0, 100.0);
+        solver.add_source(50, 1, 100.0, 0.0, 100.0);
+        solver.add_source(51, 1, 100.0, 0.0, 100.0);
+        solver.add_source(52, 1, 100.0, 0.0, 100.0);
+        solver.add_source(53, 1, 100.0, 0.0, 100.0);
+
         solver.solve();
-        //FluidSolver::print_variable(&solver.velocity_x);
+
+        if i % 4 == 0 {
+            let f = format!("images/density{}.png", i / 4);
+            FluidSolver::variable_image(&solver.density, &*f);
+        }
+
+        //println!("{:?}", solver.particles);
+        //visualiser.draw_markers( &solver.particles );
+        // let mut temp = Vec::new();
+        // for a in 0..101 {
+        //     let mut temp2 = Vec::new();
+        //     for b in 0..101 {
+        //         temp2.push(solver.density.interpolate_2d(b as f64, a as f64))
+        //     }
+        //     temp.push(temp2);
+        // }
+
+        //visualiser.draw_density( &solver.density.values );
     }
+
     //solver.print_velocity();
     //solver.calculate_divergence();
     //solver.print_divergence();
@@ -151,6 +187,9 @@ fn main() {
     //solver.print_velocity();
 
     solver.write_velocity();
+    //FluidSolver::print_variable(&solver.density);
+    //println!("{:?}", &solver.density.temp);
+    FluidSolver::variable_image(&solver.density, "density.png");
 
     //solver.solve();
     //solver.solve();
