@@ -11,11 +11,12 @@ use glium::VertexBuffer;
 use glium::IndexBuffer;
 use glium::index;
 use glium::DrawParameters;
-use glium::texture::RawImage2d;
-
+use glium::texture::{RawImage2d, ClientFormat};
 
 use fluid_solver::FluidSolver;
 use std::ops::Deref;
+use std::borrow::Cow;
+use std::borrow;
 
 
 
@@ -64,15 +65,31 @@ impl Visualiser {
 
 	pub fn draw_density(&self, density: &Vec<Vec<f64>>) {
 
-		let dens: Vec<u32> = density.iter()
-						     		.flat_map(|v| v.iter().map(|v| *v as u32))
-						  			.collect();
+		let dens: Vec<f32> = density.iter()
+						     		.flat_map(|a| a.iter().map(|v| vec![*v as f32, *v as f32, *v as f32] ) )
+						  			.collect::<Vec<Vec<f32>>>()
+									.iter()
+									.flat_map(|a| a.clone() )
+									.collect();
+
+
 
 		let (w, h) = (density[0].len() as u32, density.len() as u32);
 
-		let tex = RawImage2d::from_raw_rgba_reversed(dens, (w, h) );
-		let opengl_texture = glium::texture::CompressedSrgbTexture2d::new(&self.display, tex).unwrap();
+		// println!("{:?}", dens.len());
+		// println!("{:?}", w);
+		// println!("{:?}", h);
 
+		//let tex = RawImage2d::from_raw_rgba_reversed(dens, (w, h) );
+		let raw = RawImage2d {
+			data: Cow::Owned(dens),
+			width: w,
+			height: h,
+			format: ClientFormat::F32F32F32
+		};
+		//let tex = RawImage2d::from_raw(data: Cow<[(u8, u8, u8, u8)]>, width: u32, height: u32);
+		//let opengl_texture = glium::texture::CompressedSrgbTexture2d::new(&self.display, tex).unwrap();
+		let opengl_texture = glium::texture::Texture2d::new(&self.display, raw).unwrap();
 
 		let vertex_buffer = {
 	        #[derive(Copy, Clone)]
@@ -136,7 +153,7 @@ impl Visualiser {
 
 	}
 
-	pub fn draw_markers(&self, points: &Vec<(f64, f64)>) {
+	pub fn draw_markers(&self, points: &Vec<(f64, f64)>, width: i32, height: i32) {
 
 		let (pw, ph): (u32, u32) = self.display.get_window().unwrap().deref().get_inner_size_pixels().unwrap();
 
@@ -144,7 +161,7 @@ impl Visualiser {
 
 		for p in points {
 			let (x, y) = *p;
-			ps.push( Vertex { position: [ (2.0 * x  / 11.0) - 1.0 , (2.0 * y / 11.0) - 1.0 ] } )
+			ps.push( Vertex { position: [ (2.0 * x  / width as f64 ) - 1.0 , (2.0 * y / height as f64) - 1.0 ] } )
 		}
 
 

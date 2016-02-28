@@ -5,223 +5,113 @@ use Fluids::fluid_solver::*;
 use Fluids::linear_solvers;
 use Fluids::visualiser::Visualiser;
 
-//p1---p2
-//|    |
-//p3---p4
-//
+fn test() {
+    let mut x: Vec<f64> = vec![0.0; 16];
+    let mut d: Vec<f64> = vec![0.0; 16];
+    let mut vx = vec![0.0; 20];
+    let mut vy = vec![10.0; 20];
+
+    d[0] = 10.0;
+    d[1] = 10.0;
+    d[2] = 10.0;
+    d[3] = 10.0;
+
+    vy[0] = 0.0;
+    vy[1] = 0.0;
+    vy[2] = 0.0;
+    vy[3] = 0.0;
 
 
-//p1 - - - p2
-//|        |
-//|   p    |
-//|        |
-//p3 - - - p4
+    println!("{:?}", vy);
 
 
-fn lerp(pos: (f64, f64), v: &Vec<Vec<f64>>) -> f64 {
-    let (x, y) = pos;
-    let (p1_x, p1_y) = ( (x-1.0).ceil(), y.ceil() );
-    let (p2_x, p2_y) = (x.ceil(), y.ceil());
-    let (p3_x, p3_y) = ((x-1.0).ceil(), (y-1.0).ceil());
-    let (p4_x, p4_y) = (x.ceil(), (y-1.0).ceil());
+    linear_solvers::relaxation(&mut x, &d, 4, 4, 1.0, 0.01, 1.0, 400);
 
-    let alpha = y - p3_y;
-    let beta = x - p3_x;
+    println!("{:?}", x);
+    println!("{:?}", d);
 
-    v[p1_y as usize][p1_x as usize] * (1.0-beta) * alpha + v[p2_y as usize][p2_x as usize] * beta * alpha + v[p4_y as usize][p3_x as usize] * (1.0-beta) * (1.0-alpha) + v[p4_y as usize][p4_x as usize] * beta * (1.0 - alpha)
-}
+    vy[0] = vy[0] - (0.01 / (1.0*1.0))*x[0];
+    vy[1] = vy[1] - (0.01 / (1.0*1.0))*x[1];
+    vy[2] = vy[2] - (0.01 / (1.0*1.0))*x[2];
+    vy[3] = vy[3] - (0.01 / (1.0*1.0))*x[3];
 
-pub fn jacobi(A: fn(i32, i32) -> f64, x: fn(i32) -> f64, b: fn(i32) -> f64, r: &mut Vec<f64>, n: i32) {
+    vy[4] = vy[4] - (0.01 / (1.0*1.0))*(x[4] - x[0]);
+    vy[5] = vy[5] - (0.01 / (1.0*1.0))*(x[5] - x[1]);
+    vy[6] = vy[6] - (0.01 / (1.0*1.0))*(x[6] - x[2]);
+    vy[7] = vy[7] - (0.01 / (1.0*1.0))*(x[7] - x[3]);
 
-    let mut temp1: Vec<f64> = std::vec::from_elem(0.0, n as usize);
-    let mut temp2: Vec<f64> = std::vec::from_elem(0.0, n as usize);
-    let mut diff: Vec<f64> = std::vec::from_elem(0.0, n as usize);
+    vy[8] = vy[8] - (0.01 / (1.0*1.0))*(x[8] - x[4]);
+    vy[9] = vy[9] - (0.01 / (1.0*1.0))*(x[9] - x[5]);
+    vy[10] = vy[10] - (0.01 / (1.0*1.0))*(x[10] - x[6]);
+    vy[11] = vy[11] - (0.01 / (1.0*1.0))*(x[11] - x[7]);
 
-    let zero: Vec<f64> = std::vec::from_elem(0.0, n as usize);
+    vy[12] = vy[12] - (0.01 / (1.0*1.0))*(x[12] - x[8]);
+    vy[13] = vy[13] - (0.01 / (1.0*1.0))*(x[13] - x[9]);
+    vy[14] = vy[14] - (0.01 / (1.0*1.0))*(x[14] - x[10]);
+    vy[15] = vy[15] - (0.01 / (1.0*1.0))*(x[15] - x[11]);
 
-    for i in 0..n {
-        temp1[i as usize] = x(i);
-    }
-
-    let limit = 100;
-    let epsilon = 0.001;
-
-    for k in 0..limit {
-        let mut a: f64 = 0.0;
-        for i in 0..n {
-            let mut sigma = 0.0;
-            for j in 0..n {
-                if i != j {
-                    sigma = sigma + A(i, j) * temp1[j as usize];
-                }
-
-                diff[i as usize] += A(i, j) * temp1[j as usize];
-            }
-            temp2[i as usize] = ( b(i) - sigma ) / A(i, i);
-            diff[i as usize] -= b(i);
-            a += diff[i as usize];
-        }
-
-        if a.abs().sqrt() < epsilon {
-             break;
-        }
-
-        temp1 = temp2.clone();
-        diff = zero.clone();
-    }
-
-    *r = temp2;
-}
+    println!("{:?}", vy);
 
 
-// fn A(r: i32, c: i32) -> f64 {
-//     let t = vec![vec![2.0, 1.0],
-//                  vec![5.0, 7.0]
-//                 ];
-//     t[r as usize][c as usize]
-// }
-//
-// fn x(c: i32) -> f64 {
-//     let t: Vec<f64> = vec![0.0, 1.0];
-//     t[c as usize]
-// }
-//
-// fn b(c: i32) -> f64 {
-//     let t: Vec<f64> = vec![11.0, 13.0];
-//     t[c as usize]
-// }
+    // for i in 0..self.rows+1 {
+    //     for j in 0..self.columns+1 {
+    //         let p = i * self.columns + j;
+    //
+    //         let p1 = if j < self.columns && i < self.rows { self.pressure[ p as usize ] } else { 0.0 };
+    //         let p2 = if i < self.rows && j < self.columns { self.pressure[ p as usize ] } else { 0.0 };
+    //
+    //         let p3 = if j - 1 >= 0 && i < self.rows { self.pressure[ p as usize - 1 ] } else { 0.0 };
+    //         let p4 = if i - 1 >= 0 && j < self.columns { self.pressure[ (p - self.columns) as usize ] } else { 0.0 };
+    //
+    //
+    //         if j <= self.columns && i < self.rows {
+    //             self.velocity_x.values[i as usize][j as usize] = self.velocity_x.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( p1- p3 );
+    //         }
+    //         if j < self.columns && i <= self.rows {
+    //             self.velocity_y.values[i as usize][j as usize] = self.velocity_y.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( p2 - p4 );
+    //         }
+    //     }
+    // }
 
 
-fn A(r: i32, c: i32, n: i32) -> f64 {
-    let t = vec![vec![12.0, -9.0],
-                 vec![8.0, 9.0]
-                ];
-    t[r as usize][c as usize]
-}
-
-fn x(c: i32) -> f64 {
-    let t: Vec<f64> = vec![1.0, 1.0];
-    t[c as usize]
-}
-
-fn b(c: i32) -> f64 {
-    let t: Vec<f64> = vec![37.0, 23.0];
-    t[c as usize]
 }
 
 
 fn main() {
 
-    // let visualiser = Visualiser::new();
 
-    let mut solver = FluidSolver::new(1.0, 101, 101, 0.05, 1.0);
+    let mut solver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0);
+    solver.apply_gravity();
+    FluidSolver::print_variable(&solver.velocity_y);
+    //solver.set_boundaries();
+    //FluidSolver::print_variable(&solver.velocity_y);
 
+    solver.project();
 
-    // solver.set_flow(5, 0, 100.0, 0.0, 0.0);
-    // solver.set_flow(5, 1, 100.0, 0.0, 0.0);
-    // solver.set_flow(5, 2, 100.0, 0.0, 0.0);
-
-    for i in 0..11 {
-        for j in 0..11 {
-            //solver.add_source(i, j, 0.0, 0.0, 100.0);
-        }
-    }
-
-    //solver.add_source(5, 5, 100.0, 0.0, 0.0);
-
-
-    // for i in 0..11 {
-    //     for j in 0..11 {
-    //         solver.add_source(i, j, 500.0, 0.0, 0.0);
-    //     }
-    // }
-
-    //println!("{:?}", solver.particles);
-
-    //solver.add_source(50, 5, 100.0, 0.0, 500.0);
-
-
-    for i in 0..10000 {
-        solver.add_source(49, 1, 100.0, 0.0, 100.0);
-        solver.add_source(50, 1, 100.0, 0.0, 100.0);
-        solver.add_source(51, 1, 100.0, 0.0, 100.0);
-        solver.add_source(52, 1, 100.0, 0.0, 100.0);
-        solver.add_source(53, 1, 100.0, 0.0, 100.0);
-
-        solver.solve();
-
-        if i % 4 == 0 {
-            let f = format!("images/density{}.png", i / 4);
-            FluidSolver::variable_image(&solver.density, &*f);
-        }
-
-        //println!("{:?}", solver.particles);
-        //visualiser.draw_markers( &solver.particles );
-        // let mut temp = Vec::new();
-        // for a in 0..101 {
-        //     let mut temp2 = Vec::new();
-        //     for b in 0..101 {
-        //         temp2.push(solver.density.interpolate_2d(b as f64, a as f64))
-        //     }
-        //     temp.push(temp2);
-        // }
-
-        //visualiser.draw_density( &solver.density.values );
-    }
-
-    //solver.print_velocity();
-    //solver.calculate_divergence();
-    //solver.print_divergence();
+    solver.calculate_divergence();
+    solver.print_divergence();
     //solver.project();
 
 
-    // solver.print_pressure();
-    //solver.calculate_divergence();
-    //solver.print_divergence();
-
-    // solver.solve();
-    //solver.calculate_divergence();
-    //solver.print_divergence();
-    //FluidSolver::print_variable(&solver.velocity_x);
-
-    //solver.print_velocity();
-
-    solver.write_velocity();
-    //FluidSolver::print_variable(&solver.density);
-    //println!("{:?}", &solver.density.temp);
-    FluidSolver::variable_image(&solver.density, "density.png");
-
-    //solver.solve();
-    //solver.solve();
-    // solver.solve();
-    // solver.solve();
-    // solver.solve();
-    // solver.solve();
-    // solver.solve();
-    // solver.solve();
-    //solver.solve();
+    FluidSolver::print_variable(&solver.velocity_y);
+    solver.print_pressure();
+    // solver.calculate_divergence();
+    // solver.print_divergence();
 
 
-    //FluidSolver::print_variable(&solver.velocity_x);
+
+    // let visualiser = Visualiser::new();
     //
-
-    // FluidSolver::variable_image(&solver.velocity_x, "velocity_x");
-    // FluidSolver::variable_image(&solver.velocity_y, "velocity_y");
-
-
-    //let mut result: Vec<f64> = vec![0.0, 0.0];
-
-    //let _ = linear_solvers::jacobi(A, &mut result, b, 2);
-    //println!("{}, {}", result[0], result[1]);
-
-    // for i in 0..16 {
-    //     for j in 0..16 {
-    //         let f = FluidSolver::laplacian(i, j, 4);
-    //         print!("{} ", f);
-    //     }
-    //     println!("");
+    //let mut solver = FluidSolver::new(1.0, 128, 128, 0.05, 1.0);
+    //
+    //
+    // for i in 0..100000 {
+    //     solver.add_source(53, 1, 100.0, 0.0, 0.0);
+    //
+    //     solver.solve();
+    //
+    //     visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
     // }
-
 
 
 }

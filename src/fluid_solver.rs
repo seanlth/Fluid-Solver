@@ -189,10 +189,10 @@ pub struct FluidSolver {
 	pub density: Variable,
 	pub particles: Vec<(f64, f64)>,
 	divergence: Vec<f64>,
-	pressure: Vec<f64>,
+	pub pressure: Vec<f64>,
 	fluid_density: f64,
-	rows: i32,
-	columns: i32,
+	pub rows: i32,
+	pub columns: i32,
 	dt: f64,
 	dx: f64
 }
@@ -202,9 +202,9 @@ impl FluidSolver {
 
 		let mut particles = Vec::new();
 
-		for i in 0..rows*10 {
-			for j in 0..columns*10 {
-				particles.push( (i as f64 * dx / 10.0, j as f64*dx / 10.0 ) );
+		for i in 0..rows*2 {
+			for j in 0..columns*2 {
+				particles.push( (i as f64 * dx / 2.0, j as f64*dx / 2.0 ) );
 			}
 		}
 
@@ -254,12 +254,23 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::relaxation( FluidSolver::laplacian, &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 70 );
+		linear_solvers::relaxation_unchecked( &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 2000 );
 	}
 
 	pub fn solve(&mut self) {
 		self.project();
+		// self.apply_gravity();
+		// self.project();
 		self.advect();
+	}
+
+	pub fn apply_gravity(&mut self) {
+		for r in 0..self.rows+1 {
+			for c in 0..self.columns {
+				self.velocity_y.values[r as usize][c as usize] -= 10.0;
+
+			}
+		}
 	}
 
 	pub fn advect_particles(&mut self) {
@@ -292,12 +303,32 @@ impl FluidSolver {
 		for i in 0..self.rows {
 			for j in 0..self.columns {
 				let d = i * self.columns + j;
-				self.divergence[d as usize] = -(self.velocity_x.values[i as usize][j as usize + 1] - self.velocity_x.values[i as usize][j as usize] + self.velocity_y.values[i as usize + 1][j as usize] - self.velocity_y.values[i as usize][j as usize]) / self.dx;
+
+				let x_velocity1 = if j < self.columns-1 {  self.velocity_x.values[i as usize][j as usize + 1] } else { 0.0 };
+				let x_velocity2 = if j > 0 {  self.velocity_x.values[i as usize][j as usize] } else { 0.0 };
+
+				let y_velocity1 = if i < self.rows-1 {  self.velocity_y.values[i as usize + 1][j as usize] } else { 0.0 };
+				let y_velocity2 = if i > 0 {  self.velocity_y.values[i as usize][j as usize] } else { 0.0 };
+
+				self.divergence[d as usize] = -(x_velocity1 - x_velocity2 + y_velocity1 - y_velocity2) / self.dx;
 			}
 		}
 	}
 
+	pub fn set_boundaries(&mut self) {
+		for i in 0..self.rows {
+			self.velocity_x.values[i as usize][0] = 0.0;
+			self.velocity_x.values[i as usize][self.columns as usize] = 0.0;
+		}
+		for i in 0..self.columns {
+			self.velocity_y.values[0][ i as usize ] = 0.0;
+			self.velocity_y.values[self.rows as usize][i as usize] = 0.0;
+		}
+	}
+
 	pub fn project(&mut self) {
+		// sets divergence to 0 on boundaries
+		//self.set_boundaries();
 		self.calculate_divergence();
 		self.pressure_solve();
 
@@ -324,14 +355,14 @@ impl FluidSolver {
 
 		// boundary conditions
 		// can be handled in pressure
-		for i in 0..self.rows {
-			self.velocity_x.values[i as usize][0] = 0.0;
-			self.velocity_x.values[i as usize][self.columns as usize] = 0.0;
-		}
-		for i in 0..self.columns {
-			self.velocity_y.values[0][ i as usize ] = 0.0;
-			self.velocity_y.values[self.rows as usize][i as usize] = 0.0;
-		}
+		// for i in 0..self.rows {
+		// 	self.velocity_x.values[i as usize][0] = 0.0;
+		// 	self.velocity_x.values[i as usize][self.columns as usize] = 0.0;
+		// }
+		// for i in 0..self.columns {
+		// 	self.velocity_y.values[0][ i as usize ] = 0.0;
+		// 	self.velocity_y.values[self.rows as usize][i as usize] = 0.0;
+		// }
 	}
 
 	pub fn add_source(&mut self, r: i32, c: i32, velocity_x: f64, velocty_y: f64, density: f64) {
@@ -345,10 +376,11 @@ impl FluidSolver {
 	pub fn print_variable(v: &Variable) {
 		for i in v.values.iter().rev() {
 			for j in i {
-				print!("{} ", *j);
+				print!("{:.*} ", 2,  *j);
 			}
 			println!("");
 		}
+		println!("");
 	}
 
 	pub fn print_velocity(&self) {
