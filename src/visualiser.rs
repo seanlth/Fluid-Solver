@@ -76,19 +76,13 @@ impl Visualiser {
 
 		let (w, h) = (density[0].len() as u32, density.len() as u32);
 
-		// println!("{:?}", dens.len());
-		// println!("{:?}", w);
-		// println!("{:?}", h);
-
-		//let tex = RawImage2d::from_raw_rgba_reversed(dens, (w, h) );
 		let raw = RawImage2d {
 			data: Cow::Owned(dens),
 			width: w,
 			height: h,
 			format: ClientFormat::F32F32F32
 		};
-		//let tex = RawImage2d::from_raw(data: Cow<[(u8, u8, u8, u8)]>, width: u32, height: u32);
-		//let opengl_texture = glium::texture::CompressedSrgbTexture2d::new(&self.display, tex).unwrap();
+	
 		let opengl_texture = glium::texture::Texture2d::new(&self.display, raw).unwrap();
 
 		let vertex_buffer = {
@@ -146,7 +140,7 @@ impl Visualiser {
 
 	   // drawing a frame
 	   let mut target = self.display.draw();
-	   target.clear_color(0.2, 0.2, 1.0, 1.0);
+	   target.clear_color(0.0, 0.0, 0.0, 1.0);
 	   target.draw(&vertex_buffer, &index_buffer, &program, &uniforms, &Default::default()).unwrap();
 	   target.finish().unwrap();
 

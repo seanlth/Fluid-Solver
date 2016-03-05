@@ -213,7 +213,7 @@ impl FluidSolver {
  			velocity_y: Variable::new_zeroed(rows+1, columns, 0.5, 0.0),
 			density: Variable::new_zeroed(rows, columns, 0.5, 0.5),
 			particles: particles,
-			pressure: vec![0.0; (rows*columns) as usize],
+			pressure: vec![0.0; ((rows)*(columns)) as usize],
 			divergence: vec![0.0; (rows*columns) as usize],
 			fluid_density: fluid_density,
  			rows: rows,
@@ -254,20 +254,19 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::relaxation_unchecked( &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 2000 );
+		linear_solvers::relaxation_unchecked( &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 200 );
 	}
 
 	pub fn solve(&mut self) {
+		self.apply_gravity();
 		self.project();
-		// self.apply_gravity();
-		// self.project();
 		self.advect();
 	}
 
 	pub fn apply_gravity(&mut self) {
 		for r in 0..self.rows+1 {
 			for c in 0..self.columns {
-				self.velocity_y.values[r as usize][c as usize] -= 10.0;
+				self.velocity_y.values[r as usize][c as usize] -= 9.8 * self.dt;
 
 			}
 		}
@@ -308,7 +307,7 @@ impl FluidSolver {
 				let x_velocity2 = if j > 0 {  self.velocity_x.values[i as usize][j as usize] } else { 0.0 };
 
 				let y_velocity1 = if i < self.rows-1 {  self.velocity_y.values[i as usize + 1][j as usize] } else { 0.0 };
-				let y_velocity2 = if i > 0 {  self.velocity_y.values[i as usize][j as usize] } else { 0.0 };
+				let y_velocity2 = if i > 0 { self.velocity_y.values[i as usize][j as usize] } else { 0.0 };
 
 				self.divergence[d as usize] = -(x_velocity1 - x_velocity2 + y_velocity1 - y_velocity2) / self.dx;
 			}
@@ -327,8 +326,6 @@ impl FluidSolver {
 	}
 
 	pub fn project(&mut self) {
-		// sets divergence to 0 on boundaries
-		//self.set_boundaries();
 		self.calculate_divergence();
 		self.pressure_solve();
 
@@ -348,28 +345,22 @@ impl FluidSolver {
 					self.velocity_x.values[i as usize][j as usize] = self.velocity_x.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( p1- p3 );
 				}
 				if j < self.columns && i <= self.rows {
+					//let p4 = if i - 1 >= 0 && j < self.columns { self.pressure[ (p - self.columns) as usize ] } else { self.pressure[ p as usize ] - ((self.fluid_density*self.dx)/self.dt)*( self.velocity_y.values[i as usize][j as usize] ) };
+
 					self.velocity_y.values[i as usize][j as usize] = self.velocity_y.values[i as usize][j as usize] - (self.dt / (self.fluid_density * self.dx)) * ( p2 - p4 );
 				}
 			}
 		}
 
 		// boundary conditions
-		// can be handled in pressure
-		// for i in 0..self.rows {
-		// 	self.velocity_x.values[i as usize][0] = 0.0;
-		// 	self.velocity_x.values[i as usize][self.columns as usize] = 0.0;
-		// }
-		// for i in 0..self.columns {
-		// 	self.velocity_y.values[0][ i as usize ] = 0.0;
-		// 	self.velocity_y.values[self.rows as usize][i as usize] = 0.0;
-		// }
+		self.set_boundaries();
 	}
 
 	pub fn add_source(&mut self, r: i32, c: i32, velocity_x: f64, velocty_y: f64, density: f64) {
 		self.velocity_x.values[r as usize][c as usize+1] = velocity_x;
-		self.velocity_x.values[r as usize][c as usize-1] = velocity_x;
+		self.velocity_x.values[r as usize][c as usize] = velocity_x;
 		self.velocity_y.values[r as usize+1][c as usize] = velocty_y;
-		self.velocity_y.values[r as usize-1][c as usize] = velocty_y;
+		self.velocity_y.values[r as usize][c as usize] = velocty_y;
 		self.density.values[r as usize][c as usize] = density;
 	}
 
@@ -420,7 +411,6 @@ impl FluidSolver {
 		let mut f = File::create("data.dat").unwrap();
 
 		let mut data = String::new();
-		//data = data + "{";
 
 		for i in 0..self.rows {
 			for j in 0..self.columns {
@@ -430,13 +420,6 @@ impl FluidSolver {
 				data = data + &*format!("{} {} ", p, v);
 			}
 		}
-		//
-		// for i in 0..self.rows {
-		// 	for j in 0..self.columns {
-		// 		let p = format!("{} {}", j, i );
-		// 		data = data + &*format!("{} ", p);
-		// 	}
-		// }
 
 		let _ = f.write_all(data.as_bytes());
 	}
@@ -449,9 +432,11 @@ impl FluidSolver {
 				temp.push(*j as u8);
 				temp.push(*j as u8);
 				temp.push(*j as u8);
+				temp.push(*j as u8);
 			}
 		}
-		let _ = lodepng::encode_file(name, &temp, v.values[0].len() as usize, v.values.len() as usize, lodepng::LCT_RGB, 8);
+		//let _ = lodepng::encode_file(name, &temp, v.values[0].len() as usize, v.values.len() as usize, lodepng::LCT_RGB, 8);
+		let _ = lodepng::encode32_file(name, &temp.as_slice(), v.values[0].len() as usize, v.values.len() as usize);
 	}
 
 

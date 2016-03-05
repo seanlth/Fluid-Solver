@@ -81,37 +81,45 @@ fn main() {
 
 
     let mut solver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0);
-    solver.apply_gravity();
-    FluidSolver::print_variable(&solver.velocity_y);
-    //solver.set_boundaries();
-    //FluidSolver::print_variable(&solver.velocity_y);
 
-    solver.project();
-
-    solver.calculate_divergence();
-    solver.print_divergence();
-    //solver.project();
+    let visualiser = Visualiser::new();
 
 
-    FluidSolver::print_variable(&solver.velocity_y);
+    // solver.pressure = vec![
+    //                        vec![-19.60, -19.60, -19.60, -19.60, -19.60],
+    //                        vec![-9.80, -9.80, -9.80, -9.80, -9.80],
+    //                        vec![0.00, 0.00, 0.00, 0.00, 0.00],
+    //                        vec![9.80, 9.80, 9.80, 9.80, 9.80],
+    //                        vec![19.60, 19.60, 19.60, 19.60, 19.60]
+    //                       ];
+
+    solver.pressure = vec![4.9, 4.9, 4.9, 4.9, 4.9,
+                           14.7, 14.7, 14.7, 14.7, 14.7,
+                           24.5, 24.5, 24.5, 24.5, 24.5,
+                           34.3, 34.3, 34.3, 34.3, 34.3,
+                           44.1, 44.1, 44.1, 44.1, 44.1];
+
+    solver.pressure.reverse();
+
     solver.print_pressure();
-    // solver.calculate_divergence();
-    // solver.print_divergence();
+
+    for i in 0..1 {
+        //solver.add_source(125, 64, 0.0, -500.0, 1.0);
+
+        solver.solve();
+
+        // if i % 10 == 0 {
+        //     let f = format!("./images/density{}.png", i / 10);
+        //
+        //     FluidSolver::variable_image(&solver.density, &*f);
+        // }
 
 
+        //visualiser.draw_density(&solver.density.values);
+        //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
+    }
+    solver.print_pressure();
 
-    // let visualiser = Visualiser::new();
-    //
-    //let mut solver = FluidSolver::new(1.0, 128, 128, 0.05, 1.0);
-    //
-    //
-    // for i in 0..100000 {
-    //     solver.add_source(53, 1, 100.0, 0.0, 0.0);
-    //
-    //     solver.solve();
-    //
-    //     visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
-    // }
-
+    FluidSolver::print_variable(&solver.velocity_y);
 
 }
