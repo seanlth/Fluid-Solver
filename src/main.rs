@@ -4,6 +4,11 @@ extern crate lodepng;
 use Fluids::fluid_solver::*;
 use Fluids::linear_solvers;
 use Fluids::visualiser::Visualiser;
+use Fluids::interpolation;
+
+use std::io::prelude::*;
+use std::fs::File;
+
 
 fn test() {
     let mut x: Vec<f64> = vec![0.0; 16];
@@ -76,11 +81,41 @@ fn test() {
 
 }
 
+fn test_interpolation() {
+    let mut f = File::create("data.dat").unwrap();
+
+    let mut data = String::new();
+
+    let mut values = vec![
+                      vec![1.0, 2.0, 4.0, 1.0],
+                      vec![6.0, 3.0, 5.0, 2.0],
+                      vec![4.0, 2.0, 1.0, 5.0],
+                      vec![5.0, 4.0, 2.0, 3.0],
+                     ];
+    //values.reverse();
+    for i in 0..75 {
+        data = data + "{";
+        for j in 0..75 {
+            if j < 75 - 1 {
+                data = data + &*format!("{}, ", interpolation::bicubic_interpolate(j as f64 / 25.0, i as f64 / 25.0, &values));
+            }
+            else {
+                data = data + &*format!("{}", interpolation::bicubic_interpolate(j as f64 / 25.0, i as f64 / 25.0, &values));
+            }
+        }
+        data = data + "}, ";
+    }
+
+    let _ = f.write_all(data.as_bytes());
+
+
+}
+
 
 fn main() {
+    //test_interpolation();
 
-
-    let mut solver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0);
+    let mut solver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0);
 
     let visualiser = Visualiser::new();
 
@@ -93,18 +128,18 @@ fn main() {
     //                        vec![19.60, 19.60, 19.60, 19.60, 19.60]
     //                       ];
 
-    solver.pressure = vec![4.9, 4.9, 4.9, 4.9, 4.9,
-                           14.7, 14.7, 14.7, 14.7, 14.7,
-                           24.5, 24.5, 24.5, 24.5, 24.5,
-                           34.3, 34.3, 34.3, 34.3, 34.3,
-                           44.1, 44.1, 44.1, 44.1, 44.1];
+    // solver.pressure = vec![4.9, 4.9, 4.9, 4.9, 4.9,
+    //                        14.7, 14.7, 14.7, 14.7, 14.7,
+    //                        24.5, 24.5, 24.5, 24.5, 24.5,
+    //                        34.3, 34.3, 34.3, 34.3, 34.3,
+    //                        44.1, 44.1, 44.1, 44.1, 44.1];
+    //
+    //solver.pressure.reverse();
 
-    solver.pressure.reverse();
+    //solver.print_pressure();
 
-    solver.print_pressure();
-
-    for i in 0..1 {
-        //solver.add_source(125, 64, 0.0, -500.0, 1.0);
+    for i in 0..100000 {
+        solver.add_source(125, 64, 0.0, -100.0, 1.0);
 
         solver.solve();
 
@@ -115,11 +150,11 @@ fn main() {
         // }
 
 
-        //visualiser.draw_density(&solver.density.values);
+        visualiser.draw_density(&solver.density.values);
         //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
     }
-    solver.print_pressure();
+    //solver.print_pressure();
 
-    FluidSolver::print_variable(&solver.velocity_y);
+    //FluidSolver::print_variable(&solver.velocity_y);
 
 }

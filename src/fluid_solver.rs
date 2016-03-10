@@ -6,6 +6,8 @@ use std::fs::File;
 
 use linear_solvers;
 use integrators;
+use advection;
+use interpolation;
 
 pub fn matrix(row: i32, column: i32) -> Vec<Vec<f64>> {
 	let mut t: Vec<Vec<f64>> = Vec::new();
@@ -152,6 +154,9 @@ impl Variable {
 		let u_p = u.interpolate_2d(x, y);
 		let v_p = v.interpolate_2d(x, y);
 
+		//let u_p = interpolation::bilinear_interpolate(x - u.offset_x, y - u.offset_y, &u.values);
+		//let v_p = interpolation::bilinear_interpolate(x - v.offset_x, y - v.offset_y, &v.values);
+
 		let new_x = x as f64 - u_p * dt;
 		let new_y = y as f64 - v_p * dt;
 		//let new_y = y as f64;
@@ -176,7 +181,10 @@ impl Variable {
 				//let (old_x, old_y) = (c as f64 + self.offset_x, r as f64 + self.offset_y);
 
 				//println!("{}, {} -> {}, {}", old_x, old_y, c as f64 + self.offset_x, r as f64 + self.offset_y);
+
 				self.temp[r][c] = self.interpolate_2d(old_x, old_y);
+
+				//self.temp[r][c] = interpolation::bilinear_interpolate(old_x - self.offset_x, old_y - self.offset_y, &self.values);
 			}
 		}
 	}
@@ -278,9 +286,8 @@ impl FluidSolver {
 			let (x, y) = *p;
 			let u = self.velocity_x.interpolate_2d(x, y);
 			let v = self.velocity_y.interpolate_2d(x, y);
-			*p = integrators::integrate(x, y, u, v, self.dt);
+			*p = integrators::euler(x, y, u, v, self.dt);
 		}
-
 	}
 
 	pub fn advect(&mut self) {
@@ -289,13 +296,17 @@ impl FluidSolver {
 		let v = self.velocity_y.clone();
 		self.velocity_x.advect(&u, &v, self.dt);
 		self.velocity_y.advect(&u, &v, self.dt);
-		self.density.advect(&u, &v, self.dt);
+
+		//advection::upwind_advection(&mut self.density.values, &u.values, &v.values, self.dt, self.dx, 0.5, 0.5, &interpolation::bicubic_interpolate);
+		advection::semi_lagrangian(&mut self.density.values, &u.values, &v.values, self.dt, self.dx, 0.5, 0.5, &interpolation::bicubic_interpolate);
+
+		//self.density.advect(&u, &v, self.dt);
 
 		self.advect_particles();
 
 		swap(&mut self.velocity_x.values, &mut self.velocity_x.temp);
 		swap(&mut self.velocity_y.values, &mut self.velocity_y.temp);
-		swap(&mut self.density.values, &mut self.density.temp);
+		//swap(&mut self.density.values, &mut self.density.temp);
 	}
 
 	pub fn calculate_divergence(&mut self) {
