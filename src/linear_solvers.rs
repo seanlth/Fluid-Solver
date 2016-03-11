@@ -1,4 +1,32 @@
 
+use field::Field;
+
+//      0        1        2
+//   0  1  2  0  1  2  0  1  2
+//   0  1  2  3  4  5  6  7  8
+//
+//1  4 -1  0 -1  0  0  0  0  0
+//2 -1  4 -1  0 -1  0  0  0  0
+//3  0 -1  4  0  0 -1  0  0  0
+//1 -1  0  0  4 -1  0 -1  0  0
+//2  0 -1  0 -1  4 -1  0 -1  0
+//3  0  0 -1  0 -1  4  0  0 -1
+//1  0  0  0 -1  0  0  4 -1  0
+//2  0  0  0  0 -1  0 -1  4 -1
+//3  0  0  0  0  0 -1  0 -1  4
+
+pub fn laplacian(r: i32, c: i32, n: i32) -> f64 {
+    let c_x = r % n;
+    let c_y = r / n;
+
+    let x = c % n;
+    let y = c / n;
+
+    if c_x == x && c_y == y { 4.0 }
+    else if (c_x - x).abs() + (c_y - y).abs() == 1 { -1.0 }
+    else { 0.0 }
+}
+
 pub fn fast_access_mut<T>(arr: &mut Vec<T>, idx: i32) -> &mut T {
     unsafe {
         arr.get_unchecked_mut(idx as usize)
@@ -11,64 +39,59 @@ pub fn fast_access<T>(arr: &Vec<T>, idx: i32) -> &T {
     }
 }
 
-pub fn relaxation(x: &mut Vec<f64>, b: &Vec<f64>, w: i32, h: i32, density: f64, dt: f64, dx: f64, limit: usize) {
-    let n = w*h;
-
+pub fn relaxation(x: &mut Field, b: &Field, w: usize, h: usize, density: f64, dt: f64, dx: f64, limit: usize) {
     let mut temp = x.clone();
 
-
     for _ in 0..limit {
-        for i in 0..n {
-            let r = i / w;
-            let c = i % w;
+        for c in 0..h {
+            for r in 0..w {
 
-            //     |p3|
-            //  ---|--|---
-            //  p1 |  | p2
-            //  ---|--|---
-            //     |p4|
-
-
-            let p1 = if c - 1 >= 0 { x[ (r * w + c-1) as usize ] } else { 0.0 } * (dt / ( density * dx * dx ));
-            let p2 = if c + 1 < w { x[ (r * w + c+1) as usize ] } else { 0.0 } * (dt / ( density * dx * dx ));
-            let p3 = if r + 1 < h { x[ ((r+1) * w + c) as usize ] } else { 0.0 } * (dt / ( density * dx * dx ));
-            let p4 = if r - 1 >= 0 { x[ ((r-1) * w + c) as usize ] } else { 0.0 } * (dt / ( density * dx * dx ));
+                //     |p3|
+                //  ---|--|---
+                //  p1 |  | p2
+                //  ---|--|---
+                //     |p4|
 
 
-            temp[i as usize] = ( *fast_access(b, i) + p1 + p2 + p3 + p4 ) / (4.0 * (dt / ( density * dx * dx )));
+                let mut alpha = 4.0;
+
+
+                let p1 = if c - 1 >= 0 { x.at(r, c-1) } else { alpha -= 1.0; 0.0 } * (dt / ( density * dx * dx ));
+                let p2 = if c + 1 < w { x.at(r, c+1) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+                let p3 = if r + 1 < h { x.at(r+1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+                let p4 = if r - 1 >= 0 { x.at(r-1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+
+                *temp.at_mut(r, c) = b.at(r, c) + p1 + p2 + p3 + p4 / (alpha * (dt / ( density * dx * dx )));
+            }
         }
         *x = temp.clone();
     }
 }
 
-
-pub fn relaxation_unchecked(x: &mut Vec<f64>, b: &Vec<f64>, w: i32, h: i32, density: f64, dt: f64, dx: f64, limit: usize) {
-    let n = w*h;
-
+pub fn relaxation_unchecked(x: &mut Field, b: &Field, w: usize, h: usize, density: f64, dt: f64, dx: f64, limit: usize) {
     let mut temp = x.clone();
 
-
     for _ in 0..limit {
-        for i in 0..n {
-            let r = i / w;
-            let c = i % w;
+        for c in 0..h {
+            for r in 0..w {
 
-            //     |p3|
-            //  ---|--|---
-            //  p1 |  | p2
-            //  ---|--|---
-            //     |p4|
-
-
-            let mut alpha = 4.0;
-
-            let p1 = if c - 1 >= 0 { *fast_access(x, r * w + c-1) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
-            let p2 = if c + 1 < w { *fast_access(x, r * w + c+1) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
-            let p3 = if r + 1 < h { *fast_access(x, (r+1) * w + c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
-            let p4 = if r - 1 >= 0 { *fast_access(x, (r-1) * w + c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+                //     |p3|
+                //  ---|--|---
+                //  p1 |  | p2
+                //  ---|--|---
+                //     |p4|
 
 
-            *fast_access_mut(&mut temp, i) = ( *fast_access(b, i) + p1 + p2 + p3 + p4 ) / (alpha * (dt / ( density * dx * dx )));
+                let mut alpha = 4.0;
+
+
+                let p1 = if c as i32 - 1 >= 0 { x.at_fast(r, c-1) } else { alpha -= 1.0; 0.0 } * (dt / ( density * dx * dx ));
+                let p2 = if c as i32 + 1 < w as i32 { x.at_fast(r, c+1) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+                let p3 = if r as i32 + 1 < h as i32 { x.at_fast(r+1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+                let p4 = if r as i32 - 1 >= 0 { x.at_fast(r-1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+
+                *temp.at_fast_mut(r, c) = b.at_fast(r, c) + p1 + p2 + p3 + p4 / (alpha * (dt / ( density * dx * dx )));
+            }
         }
         *x = temp.clone();
     }

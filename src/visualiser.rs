@@ -17,6 +17,7 @@ use fluid_solver::FluidSolver;
 use std::ops::Deref;
 use std::borrow::Cow;
 use std::borrow;
+use field::Field;
 
 
 
@@ -63,18 +64,16 @@ impl Visualiser {
 		}
 	}
 
-	pub fn draw_density(&self, density: &Vec<Vec<f64>>) {
+	pub fn draw_density(&self, density: &Field) {
 
-		let dens: Vec<f32> = density.iter()
-						     		.flat_map(|a| a.iter().map(|v| vec![*v as f32, *v as f32, *v as f32] ) )
-						  			.collect::<Vec<Vec<f32>>>()
+		let dens: Vec<f32> = density.clone()
+									.map(|v| vec![v as f32, v as f32, v as f32] )
+									.collect::<Vec<Vec<f32>>>()
 									.iter()
-									.flat_map(|a| a.clone() )
+									.flat_map(|a| a.clone())
 									.collect();
 
-
-
-		let (w, h) = (density[0].len() as u32, density.len() as u32);
+		let (w, h) = (density.columns as u32, density.rows as u32);
 
 		let raw = RawImage2d {
 			data: Cow::Owned(dens),
@@ -82,7 +81,7 @@ impl Visualiser {
 			height: h,
 			format: ClientFormat::F32F32F32
 		};
-	
+
 		let opengl_texture = glium::texture::Texture2d::new(&self.display, raw).unwrap();
 
 		let vertex_buffer = {
@@ -147,7 +146,7 @@ impl Visualiser {
 
 	}
 
-	pub fn draw_markers(&self, points: &Vec<(f64, f64)>, width: i32, height: i32) {
+	pub fn draw_markers(&self, points: &Vec<(f64, f64)>, width: usize, height: usize) {
 
 		let (pw, ph): (u32, u32) = self.display.get_window().unwrap().deref().get_inner_size_pixels().unwrap();
 

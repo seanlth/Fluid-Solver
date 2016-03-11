@@ -1,4 +1,6 @@
 
+use field::Field;
+
 pub fn clamp(v: f64, a: f64, b: f64) -> f64 {
 	if v < a { a }
 	else if v > b { b }
@@ -8,9 +10,12 @@ pub fn clamp(v: f64, a: f64, b: f64) -> f64 {
 
 // x and y must be corrected to grid
 // field must be at least 8x8
-pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Vec<Vec<f64>>) -> f64 {
-	x = clamp(x, 0.0, field[0].len() as f64 - 1.0);
-	y = clamp(y, 0.0, field.len() as f64 - 1.0);
+pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
+	let rows = field.rows;
+	let columns = field.columns;
+
+	x = clamp(x, 0.0, columns as f64 - 1.0);
+	y = clamp(y, 0.0, rows as f64 - 1.0);
 
 
 	// points to consider in interpolation
@@ -28,24 +33,24 @@ pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Vec<Vec<f64>>) -> f64
 	// |        |		 |		  |
 	// q9 - - -q10 - - -q11 - - -q12
 
-	let x1 = clamp((x-1.0).floor(), 0.0, field[0].len() as f64 - 1.0) as usize;
-	let x2 = clamp((x).floor(), 0.0, field[0].len() as f64 - 1.0) as usize;
-	let x3 = clamp((x+1.0).floor(), 0.0, field[0].len() as f64 - 1.0) as usize;
-	let x4 = clamp((x+2.0).floor(), 0.0, field[0].len() as f64 - 1.0) as usize;
+	let x1 = clamp((x-1.0).floor(), 0.0, columns as f64 - 1.0) as usize;
+	let x2 = clamp((x).floor(), 0.0, columns as f64 - 1.0) as usize;
+	let x3 = clamp((x+1.0).floor(), 0.0, columns as f64 - 1.0) as usize;
+	let x4 = clamp((x+2.0).floor(), 0.0, columns as f64 - 1.0) as usize;
 
-	let y1 = clamp((y-1.0).floor(), 0.0, field.len() as f64 - 1.0) as usize;
-	let y2 = clamp((y).floor(), 0.0, field.len() as f64 - 1.0) as usize;
-	let y3 = clamp((y+1.0).floor(), 0.0, field.len() as f64 - 1.0) as usize;
-	let y4 = clamp((y+2.0).floor(), 0.0, field.len() as f64 - 1.0) as usize;
+	let y1 = clamp((y-1.0).floor(), 0.0, rows as f64 - 1.0) as usize;
+	let y2 = clamp((y).floor(), 0.0, rows as f64 - 1.0) as usize;
+	let y3 = clamp((y+1.0).floor(), 0.0, rows as f64 - 1.0) as usize;
+	let y4 = clamp((y+2.0).floor(), 0.0, rows as f64 - 1.0) as usize;
 
 	let alpha = y - y2 as f64;
 	let beta = x - x2 as f64;
 
 	// interpolate across x-axis
-	let a = cubic_interpolate(field[y1][x1], field[y1][x2], field[y1][x3], field[y1][x4], beta );
-	let b = cubic_interpolate(field[y2][x1], field[y2][x2], field[y2][x3], field[y2][x4], beta );
-	let c = cubic_interpolate(field[y3][x1], field[y3][x2], field[y3][x3], field[y3][x4], beta );
-	let d = cubic_interpolate(field[y4][x1], field[y4][x2], field[y4][x3], field[y4][x4], beta );
+	let a = cubic_interpolate(field.at(y1, x1), field.at(y1, x2), field.at(y1, x3), field.at(y1, x4), beta );
+	let b = cubic_interpolate(field.at(y2, x1), field.at(y2, x2), field.at(y2, x3), field.at(y2, x4), beta );
+	let c = cubic_interpolate(field.at(y3, x1), field.at(y3, x2), field.at(y3, x3), field.at(y3, x4), beta );
+	let d = cubic_interpolate(field.at(y4, x1), field.at(y4, x2), field.at(y4, x3), field.at(y4, x4), beta );
 
 	// interpolate across y-axis
 	cubic_interpolate(a, b, c, d, alpha  )
