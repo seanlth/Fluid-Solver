@@ -237,11 +237,11 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::relaxation_unchecked( &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 200 );
+		linear_solvers::relaxation( &mut self.pressure, &self.divergence, self.columns, self.rows, self.fluid_density, self.dt, self.dx, 200 );
 	}
 
 	pub fn solve(&mut self) {
-		self.apply_gravity();
+		//self.apply_gravity();
 		self.project();
 		self.advect();
 	}
@@ -249,7 +249,7 @@ impl FluidSolver {
 	pub fn apply_gravity(&mut self) {
 		for r in 0..self.rows+1 {
 			for c in 0..self.columns {
-				*self.velocity_y.at_fast_mut(r, c) -= 9.8 * self.dt;
+				*self.velocity_y.at_mut(r, c) -= 10.0;
 			}
 		}
 	}
@@ -272,12 +272,12 @@ impl FluidSolver {
 		// self.velocity_x.advect(&u, &v, self.dt);
 		// self.velocity_y.advect(&u, &v, self.dt);
 
-		advection::semi_lagrangian(&mut self.velocity_x, &u, &v, self.dt, self.dx, &interpolation::bicubic_interpolate);
-		advection::semi_lagrangian(&mut self.velocity_y, &u, &v, self.dt, self.dx, &interpolation::bicubic_interpolate);
+		advection::semi_lagrangian(&mut self.velocity_x, &u, &v, self.dt, self.dx, &interpolation::bilinear_interpolate);
+		advection::semi_lagrangian(&mut self.velocity_y, &u, &v, self.dt, self.dx, &interpolation::bilinear_interpolate);
 
 
-		//advection::upwind_advection(&mut self.density.values, &u.values, &v.values, self.dt, self.dx, 0.5, 0.5, &interpolation::bicubic_interpolate);
-		advection::semi_lagrangian(&mut self.density, &u, &v, self.dt, self.dx, &interpolation::bicubic_interpolate);
+		advection::upwind_advection(&mut self.density, &u, &v, self.dt, self.dx, &interpolation::bilinear_interpolate);
+		//advection::semi_lagrangian(&mut self.density, &u, &v, self.dt, self.dx, &interpolation::bilinear_interpolate);
 
 		//self.density.advect(&u, &v, self.dt);
 
@@ -292,10 +292,10 @@ impl FluidSolver {
 		for i in 0..self.rows {
 			for j in 0..self.columns {
 
-				let x_velocity1 = if j < self.columns-1 {  self.velocity_x.at(i, j+1) } else { 0.0 };
-				let x_velocity2 = if j > 0 {  self.velocity_x.at(i, j) } else { 0.0 };
+				let x_velocity1 = if j < self.columns-1 { self.velocity_x.at(i, j+1) } else { 0.0 };
+				let x_velocity2 = if j > 0 { self.velocity_x.at(i, j) } else { 0.0 };
 
-				let y_velocity1 = if i < self.rows-1 {  self.velocity_y.at(i + 1, j) } else { 0.0 };
+				let y_velocity1 = if i < self.rows-1 { self.velocity_y.at(i + 1, j) } else { 0.0 };
 				let y_velocity2 = if i > 0 { self.velocity_y.at(i, j) } else { 0.0 };
 
 				*self.divergence.at_mut(i, j) = -(x_velocity1 - x_velocity2 + y_velocity1 - y_velocity2) / self.dx;

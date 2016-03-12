@@ -122,7 +122,7 @@ fn field_test() {
         for c in 0..10 {
             print!("{}, ", f.at(r, c));
         }
-        println!("");    
+        println!("");
     }
 
 }
@@ -131,31 +131,20 @@ fn field_test() {
 fn main() {
     //test_interpolation();
 
-    field_test();
+    //field_test();
 
-    //let mut solver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0);
+    let mut solver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0);
+    solver.apply_gravity();
+    solver.calculate_divergence();
+    solver.print_divergence();
+    solver.pressure_solve();
+    solver.print_pressure();
+    solver.project();
 
-    //let visualiser = Visualiser::new();
-
-
-    // solver.pressure = vec![
-    //                        vec![-19.60, -19.60, -19.60, -19.60, -19.60],
-    //                        vec![-9.80, -9.80, -9.80, -9.80, -9.80],
-    //                        vec![0.00, 0.00, 0.00, 0.00, 0.00],
-    //                        vec![9.80, 9.80, 9.80, 9.80, 9.80],
-    //                        vec![19.60, 19.60, 19.60, 19.60, 19.60]
-    //                       ];
-
-    // solver.pressure = vec![4.9, 4.9, 4.9, 4.9, 4.9,
-    //                        14.7, 14.7, 14.7, 14.7, 14.7,
-    //                        24.5, 24.5, 24.5, 24.5, 24.5,
-    //                        34.3, 34.3, 34.3, 34.3, 34.3,
-    //                        44.1, 44.1, 44.1, 44.1, 44.1];
+    // let mut solver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0);
     //
-    //solver.pressure.reverse();
-
-    //solver.print_pressure();
-
+    // let visualiser = Visualiser::new();
+    //
     // for i in 0..100000 {
     //     solver.add_source(125, 64, 0.0, -100.0, 1.0);
     //
@@ -168,8 +157,8 @@ fn main() {
     //     // }
     //
     //
-    //     //visualiser.draw_density(&solver.density);
-    //     visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
+    //     visualiser.draw_density(&solver.density);
+    //     //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
     // }
     //solver.print_pressure();
 
