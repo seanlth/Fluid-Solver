@@ -15,6 +15,18 @@ mod tests {
     use test::Bencher;
 
     #[bench]
+    fn bench_relaxation_c(bencher: &mut Bencher) {
+        let w = 256;
+        let h = 256;
+
+        let mut x = Field::new(h, w, 0.0, 0.0);
+        let b = Field::new(h, w, 0.0, 0.0);
+
+        bencher.iter(|| Fluids::linear_solvers::relaxation_c(&mut x, &b, 1.0, 0.01, 0.01, 100) );
+    }
+
+
+    #[bench]
     fn bench_threaded_unchecked_relaxation(bencher: &mut Bencher) {
         let w = 256;
         let h = 256;
