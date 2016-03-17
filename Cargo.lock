@@ -2,8 +2,11 @@
 name = "Fluids"
 version = "0.1.0"
 dependencies = [
+ "crossbeam 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "glium 0.13.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 0.5.0",
+ "opencl 0.3.0-dev (git+https://github.com/luqmana/rust-opencl)",
+ "scoped_threadpool 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -117,6 +120,11 @@ dependencies = [
 [[package]]
 name = "crossbeam"
 version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "crossbeam"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -341,6 +349,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencl"
+version = "0.3.0-dev"
+source = "git+https://github.com/luqmana/rust-opencl#f540365029e9a1a48fa349eef12f3b568101cf27"
+dependencies = [
+ "libc 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "osmesa-sys"
 version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -358,6 +375,11 @@ dependencies = [
  "libc 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "scoped_threadpool"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "serde"

@@ -3,6 +3,11 @@ use interpolation;
 use integrators;
 use field::Field;
 
+// template advection
+pub fn empty_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64) {
+
+}
+
 // upwind with bicubic interpolation
 pub fn upwind_advection<F>(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &F)
  	where F : Fn(f64, f64, &Field) -> f64 {
@@ -51,11 +56,16 @@ pub fn semi_lagrangian<I>(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: 
 
             // position relative to velocity array, grid(x, y) -> velocity(i, j)
             // finds the velocity at that point
-			let u_velocity = interpolator(x, y, u);
-			let v_velocity = interpolator(x, y, v);
+	        //let u_velocity = interpolator(x, y, u);
+		    //let v_velocity = interpolator(x, y, v);
 
 			// integrate from location of variable within grid
-			let (old_x, old_y) = integrators::euler(x, y, -u_velocity, -v_velocity, dt);
+			//let (old_x, old_y) = integrators::euler(x, y, -u_velocity, -v_velocity, dt);
+            let f1 = |_: f64, _: f64| -interpolation::bicubic_interpolate(x, y, &u);
+            let f2 = |_: f64, _: f64| -interpolation::bicubic_interpolate(x, y, &v);
+            //
+            let old_x = integrators::runge_kutta_4(x, 0.0, f1, dt);
+            let old_y = integrators::runge_kutta_4(y, 0.0, f2, dt);
 
             // translate grid(old_x, old_y) -> field_array(i, j)
 			*temp.at_fast_mut(j, i) = interpolator(old_x, old_y, field);

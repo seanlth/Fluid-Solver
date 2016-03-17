@@ -1,5 +1,8 @@
 #[macro_use]
 extern crate glium;
+extern crate opencl;
+extern crate crossbeam;
+extern crate scoped_threadpool;
 
 pub mod fluid_solver;
 pub mod linear_solvers;

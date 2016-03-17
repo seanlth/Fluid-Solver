@@ -1,5 +1,21 @@
 
 use field::Field;
+use std::ops::Shr;
+
+
+
+#[derive(Debug)]
+struct V<T>(T);
+
+impl<A, B, F> Shr<F> for V<A> where
+    F: Fn(A) -> B {
+	type Output = V<B>;
+
+    fn shr(self, f: F) -> V<B> {
+		let V(v) = self;
+        V(f(v))
+    }
+}
 
 pub fn clamp(v: f64, a: f64, b: f64) -> f64 {
 	if v < a { a }
@@ -7,8 +23,62 @@ pub fn clamp(v: f64, a: f64, b: f64) -> f64 {
 	else { v }
 }
 
+pub fn linear_interpolate(a: f64, b: f64, w: f64) -> f64 {
+	a * w + b * (1.0 - w)
+}
 
-// x and y must be corrected to grid
+#[allow(dead_code)]
+fn cubic_interpolate( a: f64, b: f64, c: f64, d: f64, w: f64 ) -> f64 {
+
+	let V(minimum) = V(d) >> (|x| c.min(x)) >> (|x| b.min(x)) >> (|x| a.min(x));
+	let V(maximum) = V(d) >> (|x| c.max(x)) >> (|x| b.max(x)) >> (|x| a.max(x));
+
+    let a0 = d - c - a + b;
+    let a1 = a - b - a0;
+    let a2 = c - a;
+    let a3 = b;
+
+   	let V(r) = V(a0*w*w*w + a1*w*w + a2*w + a3) >> (|x| minimum.max(x)) >> (|x| maximum.min(x));
+	r
+}
+
+fn catmull_rom_interpolate( a: f64, b: f64, c: f64, d: f64, w: f64 ) -> f64 {
+    let V(minimum) = V(d) >> (|x| c.min(x)) >> (|x| b.min(x)) >> (|x| a.min(x));
+	let V(maximum) = V(d) >> (|x| c.max(x)) >> (|x| b.max(x)) >> (|x| a.max(x));
+
+    let a0 = -0.5*a + 1.5*b - 1.5*c + 0.5*d;
+    let a1 = a - 2.5*b + 2.0*c - 0.5*d;
+    let a2 = -0.5*a + 0.5*c;
+    let a3 = b;
+
+    let V(r) = V(a0*w*w*w + a1*w*w + a2*w + a3) >> (|x| minimum.max(x)) >> (|x| maximum.min(x));
+    r
+}
+
+#[allow(dead_code)]
+// tension : [-1, 1]
+// bias : [-1, 1]
+fn hermite_interpolate( a: f64, b: f64, c: f64, d: f64, w: f64, tension: f64, bias: f64 ) -> f64 {
+
+    let mut m0  = (b-a)*(1.0+bias)*(1.0-tension)/2.0;
+    m0 += (c-b)*(1.0-bias)*(1.0-tension)/2.0;
+    let mut m1  = (c-b)*(1.0+bias)*(1.0-tension)/2.0;
+    m1 += (d-c)*(1.0-bias)*(1.0-tension)/2.0;
+    let a0 =  2.0*(w * w * w) - 3.0*(w * w) + 1.0;
+    let a1 =    (w * w * w) - 2.0*(w * w) + w;
+    let a2 =    (w * w * w) -   (w * w);
+    let a3 = -2.0*(w * w * w) + 3.0*(w * w);
+
+    a0 * b + a1 * m0 + a2 * m1 + a3 * c
+}
+
+
+pub fn empty_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
+    0.0
+}
+
+
+
 // field must be at least 8x8
 pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
 
@@ -26,7 +96,7 @@ pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
 	// q1 - - - q2 - - - q3 - - - q4
 	// |        |        |		  |
 	// |        | 		 |		  |
-	// |        |		 |		  |
+	// |        |		 |	      |
 	// q5 - - - p1 - - - p2 - - - q6
 	// |        |        |		  |
 	// |        | 	p	 |		  |
@@ -51,32 +121,17 @@ pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
 	let beta = x - x2 as f64;
 
 	// interpolate across x-axis
-	let a = cubic_interpolate(field.at(y1, x1), field.at(y1, x2), field.at(y1, x3), field.at(y1, x4), beta );
-	let b = cubic_interpolate(field.at(y2, x1), field.at(y2, x2), field.at(y2, x3), field.at(y2, x4), beta );
-	let c = cubic_interpolate(field.at(y3, x1), field.at(y3, x2), field.at(y3, x3), field.at(y3, x4), beta );
-	let d = cubic_interpolate(field.at(y4, x1), field.at(y4, x2), field.at(y4, x3), field.at(y4, x4), beta );
+	let a = catmull_rom_interpolate(field.at(y1, x1), field.at(y1, x2), field.at(y1, x3), field.at(y1, x4), beta );
+	let b = catmull_rom_interpolate(field.at(y2, x1), field.at(y2, x2), field.at(y2, x3), field.at(y2, x4), beta );
+	let c = catmull_rom_interpolate(field.at(y3, x1), field.at(y3, x2), field.at(y3, x3), field.at(y3, x4), beta );
+	let d = catmull_rom_interpolate(field.at(y4, x1), field.at(y4, x2), field.at(y4, x3), field.at(y4, x4), beta );
 
 	// interpolate across y-axis
-	cubic_interpolate(a, b, c, d, alpha  )
-}
-
-fn cubic_interpolate( a: f64, b: f64, c: f64, d: f64, w: f64 ) -> f64 {
-    let mut a0 = d - c - a + b;
-    let mut a1 = a - b - a0;
-    let mut a2 = c - a;
-    let mut a3 = b;
-
-   	a0*w*w*w + a1*w*w + a2*w + a3
-}
-
-pub fn linear_interpolate(a: f64, b: f64, w: f64) -> f64 {
-	a * w + b * (1.0 - w)
+	catmull_rom_interpolate(a, b, c, d, alpha )
 }
 
 
-// interpolate across the field
-// x and y must be corrected
-//
+
 pub fn bilinear_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
 	x = x - field.offset_x;
 	y = y - field.offset_y;

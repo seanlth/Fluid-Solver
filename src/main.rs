@@ -5,10 +5,12 @@ use Fluids::fluid_solver::*;
 use Fluids::linear_solvers;
 use Fluids::visualiser::Visualiser;
 use Fluids::interpolation;
-use Fluids::field;
+use Fluids::field::Field;
 
 use std::io::prelude::*;
 use std::fs::File;
+
+use std::ops::Shr;
 
 
 // fn test() {
@@ -112,56 +114,93 @@ use std::fs::File;
 //
 // }
 
-fn field_test() {
-    println!("asd");
-    let mut f = field::Field::new(10, 10, 0.0, 0.0);
 
-    *f.at_mut(5, 5) = 5.0;
+pub fn runge_kutta_4<F>(x: f64, t: f64, f: F, dt: f64) -> f64
+	where F : Fn(f64, f64) -> f64 {
 
-    for r in 0..10 {
-        for c in 0..10 {
-            print!("{}, ", f.at(r, c));
-        }
-        println!("");
+    let k1 = f(x, t);
+    let k2 = f(x + (dt / 2.0)*k1, t + dt / 2.0);
+    let k3 = f(x + (dt / 2.0)*k2, t + dt / 2.0);
+    let k4 = f(x + dt*k3, t + dt);
+
+    x + (k1 + 2.0*k2 + 2.0*k3 + k4) * (dt / 6.0)
+}
+
+pub fn euler<F>(x: f64, t: f64, f: F, dt: f64) -> f64
+	where F : Fn(f64, f64) -> f64 {
+    x + f(x, t) * dt
+}
+
+pub fn bogacki_shampine<F>(x: f64, t: f64, f: F, dt: f64) -> f64
+    where F : Fn(f64, f64) -> f64 {
+
+    let k1 = f(x, t);
+    let k2 = f(x + (dt / 2.0)*k1, t + dt / 2.0);
+    let k3 = f(x + (3.0 * dt / 4.0)*k1, t + (3.0 * dt / 4.0));
+
+    x + (2.0 * k1 + 3.0 * k2 + 4.0 * k3) * (dt / 9.0)
+}
+
+fn test() {
+    let mut x = 1.0;
+
+    let f = |x: f64, t: f64| x;
+
+    let e: f64 = 2.7182818285;
+
+    let dt = 0.5;
+
+    print!("{}, ", x);
+
+    for i in 0..10 {
+        let t = i as f64 * dt;
+        //x = e.powf(t + dt);
+        //x = euler(x, t, &f, dt);
+        x = runge_kutta_4(x, t, &f, dt);
+        //println!("e^{} = {}, e^{} ~ {}", t, e.powf(t), t, x);
+        print!("{}, ", x);
     }
 
 }
 
-
 fn main() {
+    // test();
+
     //test_interpolation();
 
     //field_test();
+    //let mut asd = Field::new(4, 4, 0.5, 0.5);
+    //let asdasd = Field::new(4, 4, 0.5, 0.5);
+    //linear_solvers::threaded_relaxation_unchecked(&mut asd, &asdasd, 0.1, 0.1, 1.0, 100);
 
     let mut solver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0);
+    //let visualiser = Visualiser::new();
     solver.apply_gravity();
     solver.calculate_divergence();
     solver.print_divergence();
     solver.pressure_solve();
     solver.print_pressure();
-    solver.project();
 
-    // let mut solver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0);
+
+    //for i in 0..100000 {
+    //     //  solver.add_source(62, 0, 500.0, 0.0, 0.1);
+    //     //  solver.add_source(63, 0, 500.0, 0.0, 0.1);
+    //     //  solver.add_source(64, 0, 500.0, 0.0, 0.1);
+    //     //  solver.add_source(65, 0, 500.0, 0.0, 0.1);
+    //     //  solver.add_source(66, 0, 500.0, 0.0, 0.1);
     //
-    // let visualiser = Visualiser::new();
+    //      solver.add_source(0, 62, 0.0, 500.0, 0.3);
+    //      solver.add_source(0, 63, 0.0, 500.0, 0.3);
+    //      solver.add_source(0, 64, 0.0, 500.0, 0.3);
+    //      solver.add_source(0, 65, 0.0, 500.0, 0.3);
+    //      solver.add_source(0, 66, 0.0, 500.0, 0.3);
     //
-    // for i in 0..100000 {
-    //     solver.add_source(125, 64, 0.0, -100.0, 1.0);
+    //      solver.solve();
     //
-    //     solver.solve();
-    //
-    //     // if i % 10 == 0 {
-    //     //     let f = format!("./images/density{}.png", i / 10);
-    //     //
-    //     //     FluidSolver::variable_image(&solver.density, &*f);
-    //     // }
-    //
-    //
-    //     visualiser.draw_density(&solver.density);
-    //     //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
+    //      visualiser.draw_density_image(&solver.density, &*format!("images/density{}.png", i));
+    //      //visualiser.draw_density(&solver.density);
+    //      //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
     // }
-    //solver.print_pressure();
 
-    //FluidSolver::print_variable(&solver.velocity_y);
 
 }

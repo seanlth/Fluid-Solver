@@ -1,3 +1,4 @@
+extern crate lodepng;
 
 use glium;
 
@@ -18,6 +19,7 @@ use std::ops::Deref;
 use std::borrow::Cow;
 use std::borrow;
 use field::Field;
+
 
 
 
@@ -146,6 +148,19 @@ impl Visualiser {
 
 	}
 
+	pub fn draw_density_image(&self, density: &Field, name: &str) {
+		let mut temp = vec![];
+		for i in &density.field {
+            temp.push( (*i * 1000.0) as u8 );
+            temp.push( (*i * 1000.0) as u8 );
+            temp.push( (*i * 1000.0) as u8 );
+            temp.push( (*i * 1000.0) as u8 );
+		}
+
+		let _ = lodepng::encode32_file(name, &temp.as_slice(), density.columns as usize, density.rows as usize);
+        //let _ = lodepng::encode_file(name, &temp.as_slice(), density.columns as usize, density.rows as usize, lodepng::LCT_GREY, 8);
+	}
+
 	pub fn draw_markers(&self, points: &Vec<(f64, f64)>, width: usize, height: usize) {
 
 		let (pw, ph): (u32, u32) = self.display.get_window().unwrap().deref().get_inner_size_pixels().unwrap();
@@ -175,9 +190,6 @@ impl Visualiser {
 
         target.draw(&vertex_buffer, &indices, &self.program, &uniform! { colour: c  }, &params).unwrap();
         target.finish().unwrap();
-
-
-
 	}
 
 }

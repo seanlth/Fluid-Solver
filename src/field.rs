@@ -1,7 +1,7 @@
 
 #[derive(Clone)]
 pub struct Field{
-	field: Vec<f64>,
+	pub field: Vec<f64>,
 	pub rows: usize,
 	pub columns: usize,
 	pub offset_x: f64,
@@ -40,22 +40,73 @@ impl Field {
 	        self.field.get_unchecked_mut(r * self.columns + c)
 	    }
 	}
+
 }
 
 impl Iterator for Field {
     type Item = f64;
-    // The 'Iterator' trait only requires the 'next' method to be defined. The
-    // return type is 'Option<T>', 'None' is returned when the 'Iterator' is
-    // over, otherwise the next value is returned wrapped in 'Some'
+
     fn next(&mut self) -> Option<f64> {
-		let e = if self.current < self.field.len() {
-        	Some(self.field[self.current])
+		let mut e = if self.current < self.field.len() {
+			self.current += 1;
+        	Some(self.field[self.current-1])
 		}
 		else {
+			self.current = 0;
 			None
 		};
 
-		self.current += 1;
 		e.clone()
     }
 }
+
+
+// impl<'a> Iterator for &'a mut Field {
+//     type Item = f64;
+//
+//     fn next(&mut self) -> Option<f64> {
+// 		let mut e = if self.current < self.field.len() {
+// 			self.current += 1;
+//         	Some(self.field[self.current-1])
+// 		}
+// 		else {
+// 			self.current = 0;
+// 			None
+// 		};
+//
+// 		e.clone()
+//     }
+// }
+
+// impl<'a> DoubleEndedIterator for &'a mut Field {
+//
+//     fn next_back(&mut self) -> Option<f64> {
+// 		let e = if self.current < self.field.len() {
+// 			self.current += 1;
+//         	Some(self.field[self.field.len() - self.current])
+// 		}
+// 		else {
+// 			self.current = 0;
+// 			None
+// 		};
+//
+// 		e.clone()
+//     }
+// }
+
+// impl<'a> Iterator for core::iter::Rev<&Field> {
+//     type Item = f64;
+//
+//     fn next(&mut self) -> Option<f64> {
+// 		let e = if self.current < self.field.len() {
+// 			self.current += 1;
+//         	Some(self.field[self.current-1])
+// 		}
+// 		else {
+// 			self.current = 0;
+// 			None
+// 		};
+//
+// 		e.clone()
+//     }
+// }
