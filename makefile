@@ -11,7 +11,7 @@ clean:
 	cargo clean
 
 run:
-	cargo run
+	cargo run --release
 
 bench:
 	cargo bench

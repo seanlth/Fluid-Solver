@@ -24,8 +24,8 @@ pub struct FluidSolver {
 	dx: f64,
 	fluid_density: f64,
     advection: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64),
-    //interpolation: fn(&mut Field, &Field, &Field, f64, f64, Fn(f64, f64) -> f64),
-    //integration: fn(&mut Field, &Field, &Field, f64, f64, Fn(f64, f64) -> f64)
+    interpolation: fn(mut x: f64, mut y: f64, field: &Field) -> f64,
+    integration: fn(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64
 }
 
 impl FluidSolver {
@@ -52,8 +52,8 @@ impl FluidSolver {
 			dt: dt,
 			dx: dx,
             advection: advection::empty_advection,
-            //interpolation: interpolation::empty_interpolate,
-            //integration: integrators::empty
+            interpolation: interpolation::empty_interpolate,
+            integration: integrators::empty
  		}
  	}
 
@@ -62,15 +62,25 @@ impl FluidSolver {
         self
     }
 
+    pub fn interpolation(mut self, f: fn(mut x: f64, mut y: f64, field: &Field) -> f64) -> Self {
+        self.interpolation = f;
+        self
+    }
+
+    pub fn integration(mut self, f: fn(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64) -> Self {
+        self.integration = f;
+        self
+    }
+
 
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::relaxation_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 200 );
+		linear_solvers::relaxation_opencl( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 400 );
 	}
 
 	pub fn solve(&mut self) {
-		//self.apply_gravity();
+		self.apply_gravity();
 		self.project();
 		self.advect();
 	}
@@ -227,6 +237,16 @@ impl FluidSolver {
 		for i in (0..self.rows).rev() {
 			for j in 0..self.columns {
 				print!("{:.*}, ", 2, self.pressure.at(i, j));
+			}
+			println!("");
+		}
+		println!("");
+	}
+
+    pub fn print_density(&self) {
+		for i in (0..self.rows).rev() {
+			for j in 0..self.columns {
+				print!("{:.*}, ", 2, self.density.at(i, j));
 			}
 			println!("");
 		}

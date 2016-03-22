@@ -1,20 +1,17 @@
 use interpolation;
 use field::Field;
 
-pub fn empty<F>(x: f64, t: f64, f: F, dt: f64) -> f64
-	where F : Fn(f64, f64) -> f64 {
+pub fn empty(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64 {
     0.0
 }
 
 // Order 1
-pub fn euler<F>(x: f64, t: f64, f: F, dt: f64) -> f64
-	where F : Fn(f64, f64) -> f64 {
+pub fn euler(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64 {
     x + f(x, t) * dt
 }
 
 // Order 3
-pub fn bogacki_shampine<F>(x: f64, t: f64, f: F, dt: f64) -> f64
-    where F : Fn(f64, f64) -> f64 {
+pub fn bogacki_shampine(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64 {
 
     let k1 = f(x, t);
     let k2 = f(x + (dt / 2.0)*k1, t + dt / 2.0);
@@ -24,8 +21,7 @@ pub fn bogacki_shampine<F>(x: f64, t: f64, f: F, dt: f64) -> f64
 }
 
 // Order 4
-pub fn runge_kutta_4<F>(x: f64, t: f64, f: F, dt: f64) -> f64
-	where F : Fn(f64, f64) -> f64 {
+pub fn runge_kutta_4(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64 {
 
     let k1 = f(x, t);
     let k2 = f(x + (dt / 2.0)*k1, t + dt / 2.0);
