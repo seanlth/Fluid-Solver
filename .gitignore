@@ -7,3 +7,4 @@ lodepng.c
 lodepng.h
 *.dat
 images/
+*.a

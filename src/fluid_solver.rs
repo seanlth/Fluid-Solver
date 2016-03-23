@@ -23,13 +23,15 @@ pub struct FluidSolver {
 	dt: f64,
 	dx: f64,
 	fluid_density: f64,
+    gravity: f64,
     advection: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64),
     interpolation: fn(mut x: f64, mut y: f64, field: &Field) -> f64,
-    integration: fn(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64
+    integration: fn(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64,
+    linear_solver: fn(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize)
 }
 
 impl FluidSolver {
-	pub fn new(fluid_density: f64, rows: usize, columns: usize, dt: f64, dx: f64) -> FluidSolver  {
+	pub fn new(fluid_density: f64, rows: usize, columns: usize, dt: f64, dx: f64, gravity: f64) -> FluidSolver  {
 
 		let mut particles = Vec::new();
 
@@ -46,14 +48,16 @@ impl FluidSolver {
 			particles: particles,
 			pressure: Field::new(rows, columns, 0.5, 0.5),
 			divergence: Field::new(rows, columns, 0.5, 0.5),
-			fluid_density: fluid_density,
  			rows: rows,
  			columns: columns,
 			dt: dt,
 			dx: dx,
+            fluid_density: fluid_density,
+            gravity: gravity,
             advection: advection::empty_advection,
             interpolation: interpolation::empty_interpolate,
-            integration: integrators::empty
+            integration: integrators::empty,
+            linear_solver: linear_solvers::empty,
  		}
  	}
 
@@ -72,11 +76,15 @@ impl FluidSolver {
         self
     }
 
+    pub fn linear_solver(mut self, f: fn(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) ) -> Self {
+        self.linear_solver = f;
+        self
+    }
 
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::relaxation_opencl( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 400 );
+		linear_solvers::relaxation_fast_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 400 );
 	}
 
 	pub fn solve(&mut self) {
@@ -88,7 +96,7 @@ impl FluidSolver {
 	pub fn apply_gravity(&mut self) {
 		for r in 0..self.rows+1 {
 			for c in 0..self.columns {
-				*self.velocity_y.at_mut(r, c) -= 9.8 * self.dt;
+				*self.velocity_y.at_mut(r, c) -= self.gravity * self.dt;
 			}
 		}
 	}

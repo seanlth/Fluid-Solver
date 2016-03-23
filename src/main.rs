@@ -165,76 +165,46 @@ use std::ops::Shr;
 //
 // }
 
-fn main() {
-    // let mut answer = Vec::new();
-    // linear_solvers::add_opencl_test(&vec![0.0, 1.0, 2.0, 3.0, 4.0], &vec![1.0, 2.0, 3.0, 4.0, 5.0], &mut answer);
-    // println!("{:?}", answer);
-
-    // test();
-
-    //test_interpolation();
-
-    //field_test();
-    //let mut asd = Field::new(4, 4, 0.5, 0.5);
-    //let asdasd = Field::new(4, 4, 0.5, 0.5);
-    //linear_solvers::threaded_relaxation_unchecked(&mut asd, &asdasd, 0.1, 0.1, 1.0, 100);
-
-    let mut solver = FluidSolver::new(1.0, 32, 32, 0.01, 1.0)
+fn run() {
+    let mut solver:FluidSolver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0, 9.8)
                                    .advection(semi_lagrangian)
                                    .interpolation(bilinear_interpolate)
                                    .integration(runge_kutta_4);
-
     //let visualiser = Visualiser::new();
 
-    solver.apply_gravity();
-    solver.calculate_divergence();
-    // // solver.print_divergence();
-    solver.pressure_solve();
-    //solver.print_pressure();
+    for i in 0..1 {
+        // solver.add_source(62, 0, 500.0, 0.0, 0.1);
+        // solver.add_source(63, 0, 500.0, 0.0, 0.1);
+        // solver.add_source(64, 0, 500.0, 0.0, 0.1);
+        // solver.add_source(65, 0, 500.0, 0.0, 0.1);
+        // solver.add_source(66, 0, 500.0, 0.0, 0.1);
+        // solver.add_source(67, 0, 500.0, 0.0, 0.1);
+        // solver.add_source(68, 0, 500.0, 0.0, 0.1);
 
-    // println!("{:?}", None::<(usize, usize)>);
+        solver.solve();
+        //visualiser.draw_density(&solver.density);
+        //visualiser.draw_density_rgb(&solver.density);
+        //solver.print_density();
+        //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
+        //visualiser.draw_pressure(&solver.pressure);
+    }
+    solver.print_pressure();
+}
 
+fn main() {
+    run();
 
-    // for i in 0..10000 {
+    // let mut solver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0)
+    //                                .advection(semi_lagrangian)
+    //                                .interpolation(bilinear_interpolate)
+    //                                .integration(runge_kutta_4);
     //
-    //     //solver.add_source(5, 0, 1.0, 0.0, 0.1);
     //
-    //      solver.add_source(62, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(63, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(64, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(65, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(66, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(67, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(68, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(69, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(70, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(71, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(72, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(73, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(74, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(75, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(76, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(77, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(78, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(79, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(80, 0, 500.0, 0.0, 0.1);
-    //      solver.add_source(81, 0, 500.0, 0.0, 0.1);
     //
-    //     //  solver.add_source(0, 62, 0.0, 500.0, 0.3);
-    //     //  solver.add_source(0, 63, 0.0, 500.0, 0.3);
-    //     //  solver.add_source(0, 64, 0.0, 500.0, 0.3);
-    //     //  solver.add_source(0, 65, 0.0, 500.0, 0.3);
-    //     //  solver.add_source(0, 66, 0.0, 500.0, 0.3);
-    //
-    //      solver.solve();
-    //
-    //      //visualiser.draw_density_image(&solver.density, &*format!("images/density{}.png", i));
-    //      //visualiser.draw_density(&solver.density);
-    //      visualiser.draw_density_rgb(&solver.density);
-    //      //solver.print_density();
-    //      //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
-    //      //visualiser.draw_pressure(&solver.pressure);
-    // }
+    // solver.apply_gravity();
+    // solver.calculate_divergence();
+    // solver.pressure_solve();
+    // solver.print_pressure();
 
 
 }

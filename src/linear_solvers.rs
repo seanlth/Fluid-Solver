@@ -44,6 +44,11 @@ pub fn fast_access<T>(arr: &Vec<T>, idx: i32) -> &T {
     }
 }
 
+pub fn empty(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) {
+
+}
+
+
 pub fn relaxation(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) {
     let mut temp = x.clone();
 
@@ -117,6 +122,7 @@ pub fn relaxation_unchecked(x: &mut Field, b: &Field, density: f64, dt: f64, dx:
 #[link(name = "solver")]
 extern {
     fn relaxation_ffi(x: *mut f64, x: *const f64, w: usize, h: usize, density: f64, dt: f64, dx: f64, limit: usize);
+    fn relaxation_fast_ffi(x: *mut f64, x: *const f64, w: usize, h: usize, density: f64, dt: f64, dx: f64, limit: usize);
 }
 
 pub fn relaxation_c(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) {
@@ -125,8 +131,39 @@ pub fn relaxation_c(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, li
 
     unsafe {
         relaxation_ffi(x_c, b_c, x.columns, x.rows, density, dt, dx, limit);
-
     }
+}
+
+pub fn relaxation_fast_c(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) {
+    let columns = x.columns;
+    let rows = x.rows;
+
+    let mut padded_x = vec![0.0; rows+2];
+    for r in 0..rows {
+        for c in 0..columns+2 {
+            if c == 0 || c == columns+1 {
+                padded_x.push(0.0);
+            }
+            else {
+                padded_x.push(x.at(r, c-1)); // offset
+            }
+        }
+    }
+    padded_x.append(&mut vec![0.0; rows+2]);
+
+    let x_c = &mut padded_x.as_mut_slice()[0] as *mut f64;
+    let b_c = &b.field.as_slice()[0] as *const f64;
+
+    unsafe {
+        relaxation_fast_ffi(x_c, b_c, x.columns, x.rows, density, dt, dx, limit);
+    }
+
+
+    // for r in 1..rows+1 {
+    //     for c in 1..columns+1 {
+    //         x.field[(r-1) * columns + (c-1) ] = padded_x[r * (columns+2) + c] as f64;
+    //     }
+    // }
 }
 
 pub fn add_test(vec1: &Vec<f64>, vec2: &Vec<f64>, vec3: &mut Vec<f64>) {
@@ -231,44 +268,49 @@ pub fn relaxation_opencl(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f6
 
         let mut event = queue.enqueue_async_kernel(&kernel, (x.columns, x.rows), (1, 1), Some((group_size_columns, group_size_rows)), ());
 
-        // let mut i = 0;
-        // while i < limit - 1 {
-        //     if i % 2 == 0 {
-        //         //kernel.set_local(0, x.field.len(), &s);
-        //         //kernel.set_local(1, group_size_columns * group_size_rows, &s);
-        //         kernel.set_arg(0, &x_buffer);
-        //         kernel.set_arg(1, &new_x_buffer);
-        //         kernel.set_arg(2, &b_buffer);
-        //         kernel.set_arg(3, &x.columns);
-        //         kernel.set_arg(4, &x.rows);
-        //         kernel.set_arg(5, &(density as f32));
-        //         kernel.set_arg(6, &(dt as f32));
-        //         kernel.set_arg(7, &(dx as f32));
-        //         kernel.set_arg(8, &limit);
-        //     }
-        //     else {
-        //         //kernel.set_local(0, x.field.len(), &s);
-        //         //kernel.set_local(1, group_size_columns * group_size_rows, &s);
-        //         kernel.set_arg(0, &new_x_buffer);
-        //         kernel.set_arg(1, &x_buffer);
-        //         kernel.set_arg(2, &b_buffer);
-        //         kernel.set_arg(3, &x.columns);
-        //         kernel.set_arg(4, &x.rows);
-        //         kernel.set_arg(5, &(density as f32));
-        //         kernel.set_arg(6, &(dt as f32));
-        //         kernel.set_arg(7, &(dx as f32));
-        //         kernel.set_arg(8, &limit);
-        //     }
-        //
-        //     event = queue.enqueue_async_kernel(&kernel, (x.columns, x.rows), (1, 1), Some((group_size_columns, group_size_rows)), ());
-        //     i += 1;
-        // }
+        let mut i = 0;
+        while i < limit - 1 {
+            if i % 2 == 0 {
+                //kernel.set_local(0, x.field.len(), &s);
+                //kernel.set_local(1, group_size_columns * group_size_rows, &s);
+                kernel.set_arg(0, &x_buffer);
+                kernel.set_arg(1, &new_x_buffer);
+                kernel.set_arg(2, &b_buffer);
+                kernel.set_arg(3, &x.columns);
+                kernel.set_arg(4, &x.rows);
+                kernel.set_arg(5, &(density as f32));
+                kernel.set_arg(6, &(dt as f32));
+                kernel.set_arg(7, &(dx as f32));
+                kernel.set_arg(8, &limit);
+            }
+            else {
+                //kernel.set_local(0, x.field.len(), &s);
+                //kernel.set_local(1, group_size_columns * group_size_rows, &s);
+                kernel.set_arg(0, &new_x_buffer);
+                kernel.set_arg(1, &x_buffer);
+                kernel.set_arg(2, &b_buffer);
+                kernel.set_arg(3, &x.columns);
+                kernel.set_arg(4, &x.rows);
+                kernel.set_arg(5, &(density as f32));
+                kernel.set_arg(6, &(dt as f32));
+                kernel.set_arg(7, &(dx as f32));
+                kernel.set_arg(8, &limit);
+            }
+
+            event = queue.enqueue_async_kernel(&kernel, (x.columns, x.rows), (1, 1), Some((group_size_columns, group_size_rows)), ());
+            i += 1;
+        }
 
         unsafe { opencl::cl::ll::clFinish(queue.cqueue) };
 
         let result: Vec<f32> = queue.get(&new_x_buffer, &event);
         //println!("{:?}", result);
-        x.field = result.clone().iter().map(|v| *v as f64).collect();
+        //x.field = result.clone().iter().map(|v| *v as f64).collect();
+        for r in 1..rows+1 {
+            for c in 1..columns+1 {
+                x.field[(r-1) * columns + (c-1) ] = result[r * (columns+2) + c] as f64;
+            }
+        }
     }
     //}
 }

@@ -32,26 +32,37 @@ mod tests {
     //     bencher.iter(|| Fluids::linear_solvers::add_test(&vec1, &vec2, &mut vec3) );
     // }
 
-    #[bench]
-    fn bench_relaxation_opencl(bencher: &mut Bencher) {
-        let w = 256;
-        let h = 256;
-
-        let mut x = Field::new(h, w, 0.0, 0.0);
-        let b = Field::new(h, w, 0.0, 0.0);
-
-        bencher.iter(|| Fluids::linear_solvers::relaxation_opencl(&mut x, &b, 1.0, 0.01, 0.01, 600) );
-    }
+    // #[bench]
+    // fn bench_relaxation_opencl(bencher: &mut Bencher) {
+    //     let w = 128;
+    //     let h = 128;
+    //
+    //     let mut x = Field::new(h, w, 0.0, 0.0);
+    //     let b = Field::new(h, w, 0.0, 0.0);
+    //
+    //     bencher.iter(|| Fluids::linear_solvers::relaxation_opencl(&mut x, &b, 1.0, 0.01, 0.01, 600) );
+    // }
 
     #[bench]
     fn bench_relaxation_c(bencher: &mut Bencher) {
-        let w = 256;
-        let h = 256;
+        let w = 128;
+        let h = 128;
 
         let mut x = Field::new(h, w, 0.0, 0.0);
         let b = Field::new(h, w, 0.0, 0.0);
 
         bencher.iter(|| Fluids::linear_solvers::relaxation_c(&mut x, &b, 1.0, 0.01, 0.01, 600) );
+    }
+
+    #[bench]
+    fn bench_relaxation_fast_c(bencher: &mut Bencher) {
+        let w = 128;
+        let h = 128;
+
+        let mut x = Field::new(h, w, 0.0, 0.0);
+        let b = Field::new(h, w, 0.0, 0.0);
+
+        bencher.iter(|| Fluids::linear_solvers::relaxation_fast_c(&mut x, &b, 1.0, 0.01, 0.01, 600) );
     }
     //
     //
