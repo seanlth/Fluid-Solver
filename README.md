@@ -5,13 +5,13 @@ Code repository for my Final Year Project in Trinity College, Dublin.
 ## Building source
 
 1. Dependencies
-* Rust nightly ( tested with Rust 1.8.0-nightly )
-* clang or gcc
-* OpenCL runtime
+    * Rust nightly ( tested with Rust 1.8.0-nightly )
+    * clang or gcc
+    * OpenCL runtime
 
 2. Building
-* ```make build``` to build the project
-* ```make run``` to run the solver
+    * ```make build``` to build the project
+    * ```make run``` to run the solver
 
 ## Crates
 * ```glium``` for realtime visualisation

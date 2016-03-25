@@ -1,6 +1,7 @@
 extern crate lodepng;
 
 use std::mem::swap;
+use std::cmp;
 use std::io::prelude::*;
 use std::fs::File;
 
@@ -24,7 +25,7 @@ pub struct FluidSolver {
 	dx: f64,
 	fluid_density: f64,
     gravity: f64,
-    advection: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64),
+    advection: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64, &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64),
     interpolation: fn(mut x: f64, mut y: f64, field: &Field) -> f64,
     integration: fn(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64,
     linear_solver: fn(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize)
@@ -33,19 +34,19 @@ pub struct FluidSolver {
 impl FluidSolver {
 	pub fn new(fluid_density: f64, rows: usize, columns: usize, dt: f64, dx: f64, gravity: f64) -> FluidSolver  {
 
-		let mut particles = Vec::new();
-
-		for i in 0..rows*2 {
-			for j in 0..columns*2 {
-				particles.push( (i as f64 * dx / 2.0, j as f64*dx / 2.0 ) );
-			}
-		}
+		// let mut particles = Vec::new();
+        //
+		// for i in 0..rows*2 {
+		// 	for j in 0..columns*2 {
+		// 		particles.push( (i as f64 * dx / 2.0, j as f64*dx / 2.0 ) );
+		// 	}
+		// }
 
  		FluidSolver {
  			velocity_x: Field::new(rows, columns+1, 0.0, 0.5),
  			velocity_y: Field::new(rows+1, columns, 0.5, 0.0),
 			density: Field::new(rows, columns, 0.5, 0.5),
-			particles: particles,
+			particles: Vec::new(),
 			pressure: Field::new(rows, columns, 0.5, 0.5),
 			divergence: Field::new(rows, columns, 0.5, 0.5),
  			rows: rows,
@@ -61,7 +62,7 @@ impl FluidSolver {
  		}
  	}
 
-    pub fn advection(mut self, f: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64) ) -> Self {
+    pub fn advection(mut self, f: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64, &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64) ) -> Self {
         self.advection = f;
         self
     }
@@ -84,7 +85,8 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		linear_solvers::relaxation_fast_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 400 );
+		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600 );
+        //linear_solvers::relaxation_fast_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600 );
 	}
 
 	pub fn solve(&mut self) {
@@ -101,48 +103,39 @@ impl FluidSolver {
 		}
 	}
 
-	pub fn advect_particles(&mut self) {
-
-        let u = self.velocity_x.clone();
-        let v = self.velocity_y.clone();
-
-		for p in &mut self.particles {
-			let (x, y) = *p;
-
-            let f1 = |x: f64, t: f64| interpolation::bicubic_interpolate(x, y, &u);
-            let f2 = |x: f64, t: f64| interpolation::bicubic_interpolate(x, y, &v);
-
-			// let u = interpolation::bicubic_interpolate(x, y, &self.velocity_x);
-			// let v = interpolation::bicubic_interpolate(x, y, &self.velocity_y);
-
-			//*p = integrators::euler(x, y, u, v, self.dt);
-            //*p = ( integrators::euler(x, 0.0, f1, self.dt), integrators::euler(y, 0.0, f2, self.dt) )
-
-		}
-	}
+	// pub fn advect_particles(&mut self) {
+    //
+    //     let u = self.velocity_x.clone();
+    //     let v = self.velocity_y.clone();
+    //
+	// 	for p in &mut self.particles {
+	// 		let (x, y) = *p;
+    //
+    //         let f1 = |x: f64, t: f64| interpolation::bicubic_interpolate(x, y, &u);
+    //         let f2 = |x: f64, t: f64| interpolation::bicubic_interpolate(x, y, &v);
+    //
+	// 		// let u = interpolation::bicubic_interpolate(x, y, &self.velocity_x);
+	// 		// let v = interpolation::bicubic_interpolate(x, y, &self.velocity_y);
+    //
+	// 		//*p = integrators::euler(x, y, u, v, self.dt);
+    //         //*p = ( integrators::euler(x, 0.0, f1, self.dt), integrators::euler(y, 0.0, f2, self.dt) )
+    //
+	// 	}
+	// }
 
 	pub fn advect(&mut self) {
 
 		let u = self.velocity_x.clone();
 		let v = self.velocity_y.clone();
-		// self.velocity_x.advect(&u, &v, self.dt);
-		// self.velocity_y.advect(&u, &v, self.dt);
 
-		advection::semi_lagrangian(&mut self.velocity_x, &u, &v, self.dt, self.dx, &interpolation::bicubic_interpolate);
-		advection::semi_lagrangian(&mut self.velocity_y, &u, &v, self.dt, self.dx, &interpolation::bicubic_interpolate);
+        // println!("{}", self.velocity_x.columns);
+        // println!("{}", self.velocity_x.rows);
 
-        (self.advection)(&mut self.velocity_y, &u, &v, self.dt, self.dx, &interpolation::bicubic_interpolate);
+		(self.advection)(&mut self.velocity_x, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
+		(self.advection)(&mut self.velocity_y, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
+		(self.advection)(&mut self.density, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
 
-		//advection::upwind_advection(&mut self.density, &u, &v, self.dt, self.dx, &interpolation::bilinear_interpolate);
-		advection::semi_lagrangian(&mut self.density, &u, &v, self.dt, self.dx, &interpolation::bicubic_interpolate);
-
-		//self.density.advect(&u, &v, self.dt);
-
-		self.advect_particles();
-
-		//swap(&mut self.velocity_x.values, &mut self.velocity_x.temp);
-		//swap(&mut self.velocity_y.values, &mut self.velocity_y.temp);
-		//swap(&mut self.density.values, &mut self.density.temp);
+		//self.advect_particles();
 	}
 
 	pub fn calculate_divergence(&mut self) {
@@ -199,6 +192,22 @@ impl FluidSolver {
 		// boundary conditions
 		self.set_boundaries();
 	}
+
+    // pub fn add_source(&mut self, r: usize, c: usize, w: usize, h: usize, velocity_x: f64, velocty_y: f64, density: f64) {
+    //     let start_r = cmp::max(r, 0);
+    //     let end_r = cmp::min(self.rows, r+h);
+    //
+    //     let start_c = cmp::max(c, 0);
+    //     let end_c = cmp::min(self.columns, c+w);
+    //
+    //     for i in start_r..end_r {
+    //         for j in start_c..end_c {
+    //             *self.velocity_x.at_mut(i, j) = velocity_x;
+    //             *self.velocity_y.at_mut(i, j) = velocty_y;
+    //             *self.density.at_mut(i, c) = density;
+    //         }
+    //     }
+    // }
 
 	pub fn add_source(&mut self, r: usize, c: usize, velocity_x: f64, velocty_y: f64, density: f64) {
 		*self.velocity_x.at_mut(r, c + 1) = velocity_x;

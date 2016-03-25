@@ -3,46 +3,46 @@
 extern crate test;
 extern crate Fluids;
 
-use Fluids::linear_solvers::*;
-use Fluids::field::Field;
+
 
 
 #[cfg(test)]
 mod tests {
 	use Fluids;
-	use Fluids::linear_solvers::*;
+    use Fluids::fluid_solver::*;
     use Fluids::field::Field;
+    use Fluids::interpolation;
+    use Fluids::advection;
+    use Fluids::integrators;
+    use Fluids::linear_solvers;
     use test::Bencher;
 
     const w: usize = 256;
     const h: usize = 256;
 
-    // #[bench]
-    // fn bench_add_opencl(bencher: &mut Bencher) {
-    //     let vec1 = vec![0.0; 10000000];
-    //     let vec2 = vec![0.0; 10000000];
-    //     let mut vec3 = vec![0.0; 10000000];
-    //
-    //     bencher.iter(|| Fluids::linear_solvers::add_opencl_test(&vec1, &vec2, &mut vec3) );
-    // }
-    //
-    // #[bench]
-    // fn bench_add(bencher: &mut Bencher) {
-    //     let vec1 = vec![0.0; 10000000];
-    //     let vec2 = vec![0.0; 10000000];
-    //     let mut vec3 = vec![0.0; 10000000];
-    //
-    //     bencher.iter(|| Fluids::linear_solvers::add_test(&vec1, &vec2, &mut vec3) );
-    // }
+    #[bench]
+    fn bench_opencl(bencher: &mut Bencher) {
 
-    // #[bench]
-    // fn bench_relaxation_opencl(bencher: &mut Bencher) {
-    //
-    //     let mut x = Field::new(h, w, 0.0, 0.0);
-    //     let b = Field::new(h, w, 0.0, 0.0);
-    //
-    //     bencher.iter(|| Fluids::linear_solvers::relaxation_opencl(&mut x, &b, 1.0, 0.01, 0.01, 600) );
-    // }
+        let mut solver:FluidSolver = FluidSolver::new(1.0, w, h, 0.01, 1.0, 0.0)
+                                       .advection(advection::semi_lagrangian)
+                                       .interpolation(interpolation::bilinear_interpolate)
+                                       .integration(integrators::bogacki_shampine)
+                                       .linear_solver(linear_solvers::relaxation_opencl);
+
+        bencher.iter(|| solver.solve() );
+    }
+
+    #[bench]
+    fn bench_fast_c(bencher: &mut Bencher) {
+
+        let mut solver:FluidSolver = FluidSolver::new(1.0, w, h, 0.01, 1.0, 0.0)
+                                       .advection(advection::semi_lagrangian)
+                                       .interpolation(interpolation::bilinear_interpolate)
+                                       .integration(integrators::bogacki_shampine)
+                                       .linear_solver(linear_solvers::relaxation_fast_c);
+
+        bencher.iter(|| solver.solve() );
+    }
 
     // #[bench]
     // fn bench_relaxation_c(bencher: &mut Bencher) {

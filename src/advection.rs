@@ -4,12 +4,12 @@ use integrators;
 use field::Field;
 
 // template advection
-pub fn empty_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64) {
+pub fn empty_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64, integrator: &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64) {
 
 }
 
 // upwind with bicubic interpolation
-pub fn upwind_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64) {
+pub fn upwind_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64, integrator: &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64) {
 	let c = field.columns;
 	let r = field.rows;
 
@@ -21,8 +21,8 @@ pub fn upwind_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f6
             let x = j as f64 + field.offset_x;
             let y = i as f64 + field.offset_y;
 
-			let u_velocity = interpolator(x, y, u);
-			let v_velocity = interpolator(x, y, v);
+			let u_velocity = interpolator(x, y, u) / dx;
+			let v_velocity = interpolator(x, y, v) / dx;
 
 			let u_velocity_sign = u_velocity.signum();
 			let v_velocity_sign = v_velocity.signum();
@@ -40,11 +40,12 @@ pub fn upwind_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f6
 }
 
 // semi-lagrangian backtrace
-pub fn semi_lagrangian(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64) {
+pub fn semi_lagrangian(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64, integrator: &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64) {
 	let c = field.columns;
 	let r = field.rows;
 
 	let mut temp = field.clone();
+
 
 	for j in 0..r {
 		for i in 0..c {
@@ -59,11 +60,11 @@ pub fn semi_lagrangian(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64
 
 			// integrate from location of variable within grid
 			//let (old_x, old_y) = integrators::euler(x, y, -u_velocity, -v_velocity, dt);
-            let f1 = |_: f64, _: f64| -interpolation::bicubic_interpolate(x, y, &u);
-            let f2 = |_: f64, _: f64| -interpolation::bicubic_interpolate(x, y, &v);
+            let f1 = |_: f64, _: f64| -interpolator(x, y, &u)/dx;
+            let f2 = |_: f64, _: f64| -interpolator(x, y, &v)/dx;
             //
-            let old_x = integrators::runge_kutta_4(x, 0.0, &f1, dt);
-            let old_y = integrators::runge_kutta_4(y, 0.0, &f2, dt);
+            let old_x = integrator(x, 0.0, &f1, dt);
+            let old_y = integrator(y, 0.0, &f2, dt);
 
             // translate grid(old_x, old_y) -> field_array(i, j)
 			*temp.at_fast_mut(j, i) = interpolator(old_x, old_y, field);

@@ -7,9 +7,11 @@ double max(double a, double b) {
     return 0.5*(a + b + fabs(a - b));
 }
 
-void relaxation_fast_ffi( double* x, double* b, unsigned int w, unsigned int h, double density, double dt, double dx, unsigned int limit )
+void relaxation_fast_ffi( double* array, double* b, unsigned int w, unsigned int h, double density, double dt, double dx, unsigned int limit )
 {
-    double* new_x = (double*)malloc(sizeof(double) * (h+2) * (w+2));
+    double* x = array;
+
+    double* new_x = (double*)calloc( (h+2) * (w+2), sizeof(double) );
     double epsilon = 0.01;
 
     double scale = (dt / ( density * dx * dx ));
@@ -20,18 +22,9 @@ void relaxation_fast_ffi( double* x, double* b, unsigned int w, unsigned int h, 
         for ( int r = 1; r < h+1; r++ ) {
             for ( int c = 1; c < w+1; c++ ) {
 
-                //     |p3|
-                //  ---|--|---
-                //  p1 |  | p2
-                //  ---|--|---
-                //     |p4|
-
-
                 double alpha = 4.0;
 
                 int cell = (r * a) + c;
-
-                //printf("%d\n", cell);
 
                 alpha -= 1.0 * (c == 1);
                 alpha -= 1.0 * (c == w);
@@ -61,17 +54,22 @@ void relaxation_fast_ffi( double* x, double* b, unsigned int w, unsigned int h, 
         //if (error_delta < epsilon) { break; }
     }
 
-    if ( limit % 2 == 0 ) {
-        memcpy(x, new_x, sizeof(double) * (h+2) * (w+2));
+    // after odd number of iteration result is in x, x -> new_x
+    if ( limit % 2 == 1 ) {
+        memcpy( array, x, sizeof(double) * (h+2) * (w+2) );
+        free(x);
     }
+    else {
+        free(new_x);
+    }
+
     // for (int i = 0; i < h+2; i++) {
     //     for (int j = 0; j < w+2; j++) {
-    //         printf("%f ", x[i*(w+2) + j]);
+    //         printf("%f ", array[i*(w+2) + j]);
     //     }
     //     printf("\n");
     // }
 
-    free(new_x);
 }
 
 

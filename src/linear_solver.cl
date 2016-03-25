@@ -6,7 +6,7 @@ __kernel void vector_add(__global const double *A, __global const double *B, __g
 	C[i] = A[i] + B[i];
 }
 
-__kernel void relaxation(global float* new_x, global float* x, global const float* b, unsigned int w, unsigned int h, const float density, const float dt, const float dx, const unsigned int limit) {
+__kernel void relaxation(global float* new_x, global float* x, global const float* b, unsigned int w, unsigned int h, const float density, const float dt, const float dx) {
     int c = get_global_id(0);
     int r = get_global_id(1);
 
@@ -15,18 +15,7 @@ __kernel void relaxation(global float* new_x, global float* x, global const floa
     local float scale;
     scale = (dt / ( density * dx * dx ));
 
-    int local_c = get_local_id(0);
-    int local_r = get_local_id(1);
-
     int cell = (r * a) + c;
-
-
-    //     |p3|
-    //  ---|--|---
-    //  p1 |  | p2
-    //  ---|--|---
-    //     |p4|
-
 
     float alpha = 4.0;
 

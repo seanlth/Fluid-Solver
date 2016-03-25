@@ -2,12 +2,13 @@ extern crate Fluids;
 extern crate lodepng;
 
 use Fluids::fluid_solver::*;
-use Fluids::linear_solvers;
-use Fluids::visualiser::Visualiser;
-use Fluids::interpolation::*;
 use Fluids::field::Field;
-use Fluids::advection::*;
-use Fluids::integrators::*;
+use Fluids::visualiser::Visualiser;
+use Fluids::interpolation;
+use Fluids::advection;
+use Fluids::integrators;
+use Fluids::linear_solvers;
+
 
 use std::io::prelude::*;
 use std::fs::File;
@@ -165,46 +166,84 @@ use std::ops::Shr;
 //
 // }
 
-fn run() {
-    let mut solver:FluidSolver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0, 9.8)
-                                   .advection(semi_lagrangian)
-                                   .interpolation(bilinear_interpolate)
-                                   .integration(runge_kutta_4);
-    //let visualiser = Visualiser::new();
+// fn run() {
+//     let mut solver:FluidSolver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0, 0.0)
+//                                    .advection(advection::semi_lagrangian)
+//                                    .interpolation(interpolation::bicubic_interpolate)
+//                                    .integration(integrators::runge_kutta_4)
+//                                    .linear_solver(linear_solvers::relaxation_fast_c);
+//     let visualiser = Visualiser::new();
+//
+//     for i in 0..1000000 {
+//         solver.add_source(20, 20, 1, 1, 1000.0, 0.0, 2.0);
+//         solver.add_source(20, 127-20, 1, 1, 0.0, 1000.0, 2.0);
+//         solver.add_source(127-20, 127-20, 1, 1, -1000.0, 0.0, 2.0);
+//         solver.add_source(127-20, 20, 1, 1, 0.0, -1000.0, 2.0);
+//
+//         solver.solve();
+//         visualiser.draw_density_inverse(&solver.density);
+//         //visualiser.draw_density_rgb(&solver.density);
+//         //solver.print_density();
+//         //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
+//         //visualiser.draw_pressure(&solver.pressure);
+//     }
+//     //solver.print_pressure();
+// }
 
-    for i in 0..1 {
-        // solver.add_source(62, 0, 500.0, 0.0, 0.1);
-        // solver.add_source(63, 0, 500.0, 0.0, 0.1);
-        // solver.add_source(64, 0, 500.0, 0.0, 0.1);
-        // solver.add_source(65, 0, 500.0, 0.0, 0.1);
-        // solver.add_source(66, 0, 500.0, 0.0, 0.1);
-        // solver.add_source(67, 0, 500.0, 0.0, 0.1);
-        // solver.add_source(68, 0, 500.0, 0.0, 0.1);
+fn run() {
+    let mut solver:FluidSolver = FluidSolver::new(1.0, 512, 512, 0.01, 1.0, 0.0)
+                                   .advection(advection::semi_lagrangian)
+                                   .interpolation(interpolation::bicubic_interpolate)
+                                   .integration(integrators::runge_kutta_4)
+                                   .linear_solver(linear_solvers::relaxation_opencl);
+    let visualiser = Visualiser::new();
+
+    for i in 0..1000000 {
+        solver.add_source(511, 252, 0.0, -1000.0, 100.0);
+        solver.add_source(511, 253, 0.0, -1000.0, 100.0);
+        solver.add_source(511, 254, 0.0, -1000.0, 100.0);
+        solver.add_source(511, 255, 0.0, -1000.0, 100.0);
+        solver.add_source(511, 256, 0.0, -1000.0, 100.0);
+        solver.add_source(511, 257, 0.0, -1000.0, 100.0);
+        solver.add_source(511, 258, 0.0, -1000.0, 100.0);
 
         solver.solve();
-        //visualiser.draw_density(&solver.density);
+        visualiser.draw_density_image(&solver.density, &*format!("images/density.png"));
+        //visualiser.draw_density_inverse(&solver.density);
         //visualiser.draw_density_rgb(&solver.density);
         //solver.print_density();
         //visualiser.draw_markers(&solver.particles, solver.columns, solver.rows);
         //visualiser.draw_pressure(&solver.pressure);
     }
-    solver.print_pressure();
+    //solver.print_pressure();
 }
 
 fn main() {
     run();
 
-    // let mut solver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0)
+
+    // let mut solver = FluidSolver::new(1.0, 5, 5, 0.01, 1.0, 9.8)
     //                                .advection(semi_lagrangian)
     //                                .interpolation(bilinear_interpolate)
     //                                .integration(runge_kutta_4);
+    // solver.add_source(2, 0, 1.0, 0.0, 0.1);
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
+    // solver.solve();
     //
-    //
-    //
-    // solver.apply_gravity();
-    // solver.calculate_divergence();
-    // solver.pressure_solve();
     // solver.print_pressure();
 
+    // solver.apply_gravity();
+    // solver.calculate_divergence();
+    // solver.print_divergence();
+    // solver.project();
+    // solver.print_pressure();
+    // solver.apply_gravity();
+    // solver.calculate_divergence();
+    // solver.project();
+    // solver.print_pressure();
 
 }
