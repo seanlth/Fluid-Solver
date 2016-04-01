@@ -77,8 +77,6 @@ pub fn empty_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
     0.0
 }
 
-
-
 // field must be at least 8x8
 pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
 
@@ -121,10 +119,10 @@ pub fn bicubic_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
 	let beta = x - x2 as f64;
 
 	// interpolate across x-axis
-	let a = catmull_rom_interpolate(field.at(y1, x1), field.at(y1, x2), field.at(y1, x3), field.at(y1, x4), beta );
-	let b = catmull_rom_interpolate(field.at(y2, x1), field.at(y2, x2), field.at(y2, x3), field.at(y2, x4), beta );
-	let c = catmull_rom_interpolate(field.at(y3, x1), field.at(y3, x2), field.at(y3, x3), field.at(y3, x4), beta );
-	let d = catmull_rom_interpolate(field.at(y4, x1), field.at(y4, x2), field.at(y4, x3), field.at(y4, x4), beta );
+	let a = catmull_rom_interpolate(field.at_fast(y1, x1), field.at_fast(y1, x2), field.at_fast(y1, x3), field.at_fast(y1, x4), beta );
+	let b = catmull_rom_interpolate(field.at_fast(y2, x1), field.at_fast(y2, x2), field.at_fast(y2, x3), field.at_fast(y2, x4), beta );
+	let c = catmull_rom_interpolate(field.at_fast(y3, x1), field.at_fast(y3, x2), field.at_fast(y3, x3), field.at_fast(y3, x4), beta );
+	let d = catmull_rom_interpolate(field.at_fast(y4, x1), field.at_fast(y4, x2), field.at_fast(y4, x3), field.at_fast(y4, x4), beta );
 
 	// interpolate across y-axis
 	catmull_rom_interpolate(a, b, c, d, alpha )
@@ -159,10 +157,10 @@ pub fn bilinear_interpolate(mut x: f64, mut y: f64, field: &Field) -> f64 {
 	let alpha = y - p2_y;
 	let beta = x - p2_x;
 
-	let p1 = field.at(p1_y as usize, p1_x as usize);
-	let p2 = field.at(p2_y as usize, p2_x as usize);
-	let p3 = field.at(p3_y as usize, p3_x as usize);
-	let p4 = field.at(p4_y as usize, p4_x as usize);
+	let p1 = field.at_fast(p1_y as usize, p1_x as usize);
+	let p2 = field.at_fast(p2_y as usize, p2_x as usize);
+	let p3 = field.at_fast(p3_y as usize, p3_x as usize);
+	let p4 = field.at_fast(p4_y as usize, p4_x as usize);
 
 	// interpolate in x-axis
 	let l1 = linear_interpolate(p1, p2, beta);

@@ -239,7 +239,7 @@ pub fn add_test(vec1: &Vec<f64>, vec2: &Vec<f64>, vec3: &mut Vec<f64>) {
 pub fn add_opencl_test(vec1: &Vec<f64>, vec2: &Vec<f64>, vec3: &mut Vec<f64>)  {
     let group_size = 32;
 
-    let ker = include_str!("linear_solver.cl");
+    let ker = include_str!("kernels.cl");
 
 
     if let Ok((device, ctx, queue)) = opencl::util::create_compute_context_using_device(0) {
@@ -293,7 +293,7 @@ pub fn relaxation_opencl(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f6
     }
     padded_x.append(&mut vec![0.0; rows+2]);
 
-    let ker = include_str!("linear_solver.cl");
+    let ker = include_str!("kernels.cl");
 
     if let Ok((device, ctx, queue)) = opencl::util::create_compute_context_using_device(2) {
 

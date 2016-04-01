@@ -104,7 +104,7 @@ impl Visualiser {
         let min = pressure.rows as f64 * -4.9;
         let max = pressure.rows as f64 * 4.9;
 
-		let pressure_flat: Vec<f32> = pressure.clone()
+		let pressure_flat: Vec<f32> = pressure.field.clone().into_iter()
 									.map(|v| { let (r, g, b) = Visualiser::grey_to_jet(v, min, max); vec![r as f32, g as f32, b as f32] } )
 									.collect::<Vec<Vec<f32>>>()
 									.iter()
@@ -268,7 +268,7 @@ impl Visualiser {
 
     pub fn draw_density(&self, density: &Field) {
 
-		let dens: Vec<f32> = density.clone()
+		let dens: Vec<f32> = density.field.clone().into_iter()
 									.map(|v| { vec![v as f32, v as f32, v as f32] } )
 									.collect::<Vec<Vec<f32>>>()
 									.iter()
@@ -348,7 +348,7 @@ impl Visualiser {
 
     pub fn draw_density_inverse(&self, density: &Field) {
 
-		let dens: Vec<f32> = density.clone()
+		let dens: Vec<f32> = density.field.clone().into_iter()
 									.map(|v| { vec![1.0-v as f32, 1.0-v as f32, 1.0-v as f32] } )
 									.collect::<Vec<Vec<f32>>>()
 									.iter()
@@ -431,8 +431,8 @@ impl Visualiser {
         let min = 0.0;
         let max = density.field.iter().cloned().fold(0./0., f64::max);
 
-		let dens: Vec<f32> = density.clone()
-									.map(|v| { let (r, g, b) = Visualiser::grey_to_jet(v, min, max); vec![r as f32, g as f32, b as f32] } )
+		let dens: Vec<f32> = density.field.iter().clone()
+									.map(|v| { let (r, g, b) = Visualiser::grey_to_jet(*v, min, max); vec![r as f32, g as f32, b as f32] } )
 									.collect::<Vec<Vec<f32>>>()
 									.iter()
 									.flat_map(|a| a.clone())

@@ -6,7 +6,6 @@ pub struct Field{
 	pub columns: usize,
 	pub offset_x: f64,
 	pub offset_y: f64,
-	current: usize,
 }
 
 impl Field {
@@ -17,7 +16,6 @@ impl Field {
 			columns: columns,
 			offset_x: offset_x,
 			offset_y: offset_y,
-			current: 0
 		}
 	}
 
@@ -40,73 +38,4 @@ impl Field {
 	        self.field.get_unchecked_mut(r * self.columns + c)
 	    }
 	}
-
 }
-
-impl Iterator for Field {
-    type Item = f64;
-
-    fn next(&mut self) -> Option<f64> {
-		let mut e = if self.current < self.field.len() {
-			self.current += 1;
-        	Some(self.field[self.current-1])
-		}
-		else {
-			self.current = 0;
-			None
-		};
-
-		e.clone()
-    }
-}
-
-
-// impl<'a> Iterator for &'a mut Field {
-//     type Item = f64;
-//
-//     fn next(&mut self) -> Option<f64> {
-// 		let mut e = if self.current < self.field.len() {
-// 			self.current += 1;
-//         	Some(self.field[self.current-1])
-// 		}
-// 		else {
-// 			self.current = 0;
-// 			None
-// 		};
-//
-// 		e.clone()
-//     }
-// }
-
-// impl<'a> DoubleEndedIterator for &'a mut Field {
-//
-//     fn next_back(&mut self) -> Option<f64> {
-// 		let e = if self.current < self.field.len() {
-// 			self.current += 1;
-//         	Some(self.field[self.field.len() - self.current])
-// 		}
-// 		else {
-// 			self.current = 0;
-// 			None
-// 		};
-//
-// 		e.clone()
-//     }
-// }
-
-// impl<'a> Iterator for core::iter::Rev<&Field> {
-//     type Item = f64;
-//
-//     fn next(&mut self) -> Option<f64> {
-// 		let e = if self.current < self.field.len() {
-// 			self.current += 1;
-//         	Some(self.field[self.current-1])
-// 		}
-// 		else {
-// 			self.current = 0;
-// 			None
-// 		};
-//
-// 		e.clone()
-//     }
-// }

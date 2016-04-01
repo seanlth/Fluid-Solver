@@ -46,9 +46,9 @@ impl FluidSolver {
  			velocity_x: Field::new(rows, columns+1, 0.0, 0.5),
  			velocity_y: Field::new(rows+1, columns, 0.5, 0.0),
 			density: Field::new(rows, columns, 0.5, 0.5),
-			particles: Vec::new(),
 			pressure: Field::new(rows, columns, 0.5, 0.5),
 			divergence: Field::new(rows, columns, 0.5, 0.5),
+            particles: Vec::new(),
  			rows: rows,
  			columns: columns,
 			dt: dt,
@@ -85,7 +85,7 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600 );
+		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 200 );
         //linear_solvers::relaxation_fast_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600 );
 	}
 
@@ -211,10 +211,14 @@ impl FluidSolver {
 
 	pub fn add_source(&mut self, r: usize, c: usize, velocity_x: f64, velocty_y: f64, density: f64) {
 		*self.velocity_x.at_mut(r, c + 1) = velocity_x;
-		*self.velocity_x.at_mut(r, c) = velocity_x;
-		*self.velocity_y.at_mut(r + 1, c) = velocty_y;
-		*self.velocity_y.at_mut(r, c) = velocty_y;
+		//*self.velocity_x.at_mut(r, c) = velocity_x;
+		//*self.velocity_y.at_mut(r + 1, c) = velocty_y;
+		//*self.velocity_y.at_mut(r, c) = velocty_y;
 		*self.density.at_mut(r, c) = density;
+        *self.density.at_mut(r, c + 1) = density;
+        *self.density.at_mut(r, c - 1) = density;
+        *self.density.at_mut(r, c - 2) = density;
+        *self.density.at_mut(r, c - 3) = density;
 	}
 
 	// pub fn print_variable(v: &Variable) {
