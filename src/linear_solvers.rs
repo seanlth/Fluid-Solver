@@ -200,7 +200,7 @@ pub fn relaxation_fast_c(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f6
     let columns = x.columns;
     let rows = x.rows;
 
-    let mut padded_x = vec![0.0; rows+2];
+    let mut padded_x = vec![0.0; columns+2];
     for r in 0..rows {
         for c in 0..columns+2 {
             if c == 0 || c == columns+1 {
@@ -211,13 +211,13 @@ pub fn relaxation_fast_c(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f6
             }
         }
     }
-    padded_x.append(&mut vec![0.0; rows+2]);
+    padded_x.append(&mut vec![0.0; columns+2]);
 
     let x_c = &mut padded_x.as_mut_slice()[0] as *mut f64;
     let b_c = &b.field.as_slice()[0] as *const f64;
 
     unsafe {
-        relaxation_fast_ffi(x_c, b_c, x.columns, x.rows, density, dt, dx, limit);
+        relaxation_fast_ffi(x_c, b_c, columns, rows, density, dt, dx, limit);
     }
 
     for r in 1..rows+1 {
@@ -280,7 +280,7 @@ pub fn relaxation_opencl(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f6
     let rows = x.rows;
 
     // add zero boundary
-    let mut padded_x = vec![0.0; rows+2];
+    let mut padded_x = vec![0.0; columns+2];
     for r in 0..rows {
         for c in 0..columns+2 {
             if c == 0 || c == columns+1 {
@@ -291,7 +291,7 @@ pub fn relaxation_opencl(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f6
             }
         }
     }
-    padded_x.append(&mut vec![0.0; rows+2]);
+    padded_x.append(&mut vec![0.0; columns+2]);
 
     let ker = include_str!("kernels.cl");
 

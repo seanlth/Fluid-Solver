@@ -34,13 +34,7 @@ pub struct FluidSolver {
 impl FluidSolver {
 	pub fn new(fluid_density: f64, rows: usize, columns: usize, dt: f64, dx: f64, gravity: f64) -> FluidSolver  {
 
-		// let mut particles = Vec::new();
-        //
-		// for i in 0..rows*2 {
-		// 	for j in 0..columns*2 {
-		// 		particles.push( (i as f64 * dx / 2.0, j as f64*dx / 2.0 ) );
-		// 	}
-		// }
+
 
  		FluidSolver {
  			velocity_x: Field::new(rows, columns+1, 0.0, 0.5),
@@ -61,6 +55,15 @@ impl FluidSolver {
             linear_solver: linear_solvers::empty,
  		}
  	}
+
+    pub fn use_markers(mut self) -> Self {
+		for i in 0..self.rows*2 {
+			for j in 0..self.columns*2 {
+				self.particles.push( (j as f64 * self.dx / 2.0, i as f64*self.dx / 2.0 ) );
+			}
+		}
+        self
+    }
 
     pub fn advection(mut self, f: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64, &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64) ) -> Self {
         self.advection = f;
@@ -85,7 +88,7 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 200 );
+		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 1000 );
         //linear_solvers::relaxation_fast_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600 );
 	}
 
@@ -103,25 +106,29 @@ impl FluidSolver {
 		}
 	}
 
-	// pub fn advect_particles(&mut self) {
-    //
-    //     let u = self.velocity_x.clone();
-    //     let v = self.velocity_y.clone();
-    //
-	// 	for p in &mut self.particles {
-	// 		let (x, y) = *p;
-    //
-    //         let f1 = |x: f64, t: f64| interpolation::bicubic_interpolate(x, y, &u);
-    //         let f2 = |x: f64, t: f64| interpolation::bicubic_interpolate(x, y, &v);
-    //
-	// 		// let u = interpolation::bicubic_interpolate(x, y, &self.velocity_x);
-	// 		// let v = interpolation::bicubic_interpolate(x, y, &self.velocity_y);
-    //
-	// 		//*p = integrators::euler(x, y, u, v, self.dt);
-    //         //*p = ( integrators::euler(x, 0.0, f1, self.dt), integrators::euler(y, 0.0, f2, self.dt) )
-    //
-	// 	}
-	// }
+	pub fn advect_particles(&mut self) {
+
+        let u = self.velocity_x.clone();
+        let v = self.velocity_y.clone();
+
+		for p in &mut self.particles {
+			let (x, y) = *p;
+
+            let f1 = |o: f64, t: f64| interpolation::bicubic_interpolate(o, y, &u);
+            let f2 = |o: f64, t: f64| interpolation::bicubic_interpolate(x, o, &v);
+
+			// let u = interpolation::bicubic_interpolate(x, y, &self.velocity_x);
+			// let v = interpolation::bicubic_interpolate(x, y, &self.velocity_y);
+
+            let x = (self.integration)(x, 0.0, &f1, self.dt);
+            let y = (self.integration)(y, 0.0, &f2, self.dt);
+            *p = (x, y);
+
+			//*p = integrators::euler(x, y, u, v, self.dt);
+            //*p = ( integrators::euler(x, 0.0, f1, self.dt), integrators::euler(y, 0.0, f2, self.dt) )
+
+		}
+	}
 
 	pub fn advect(&mut self) {
 
@@ -135,7 +142,7 @@ impl FluidSolver {
 		(self.advection)(&mut self.velocity_y, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
 		(self.advection)(&mut self.density, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
 
-		//self.advect_particles();
+		self.advect_particles();
 	}
 
 	pub fn calculate_divergence(&mut self) {
@@ -209,16 +216,19 @@ impl FluidSolver {
     //     }
     // }
 
-	pub fn add_source(&mut self, r: usize, c: usize, velocity_x: f64, velocty_y: f64, density: f64) {
-		*self.velocity_x.at_mut(r, c + 1) = velocity_x;
+	pub fn add_source(&mut self, r: usize, c: usize, velocity_x: f64, velocity_y: f64, density: f64) {
+		*self.velocity_x.at_mut(r, c) = velocity_x;
+        //*self.velocity_y.at_mut(r, c) = velocity_y;
+        *self.density.at_mut(r, c) = density;
+
 		//*self.velocity_x.at_mut(r, c) = velocity_x;
 		//*self.velocity_y.at_mut(r + 1, c) = velocty_y;
 		//*self.velocity_y.at_mut(r, c) = velocty_y;
-		*self.density.at_mut(r, c) = density;
-        *self.density.at_mut(r, c + 1) = density;
-        *self.density.at_mut(r, c - 1) = density;
-        *self.density.at_mut(r, c - 2) = density;
-        *self.density.at_mut(r, c - 3) = density;
+		// *self.density.at_mut(r, c) = density;
+        // *self.density.at_mut(r, c + 1) = density;
+        // *self.density.at_mut(r, c - 1) = density;
+        // *self.density.at_mut(r, c - 2) = density;
+        // *self.density.at_mut(r, c - 3) = density;
 	}
 
 	// pub fn print_variable(v: &Variable) {

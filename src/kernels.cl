@@ -5,15 +5,20 @@
 // 	else { return v }
 // }
 //
-// float runge_kutta_4(float o, float x, float y, global float* field, double offset_x, double offset_y, unsigned int rows, unsigned int columns) {
-//
-//     float k1 = bicubic_interpolate(x, y, t);
-//     let k2 = f(x + (dt / 2.0)*k1, t + dt / 2.0);
-//     let k3 = f(x + (dt / 2.0)*k2, t + dt / 2.0);
-//     let k4 = f(x + dt*k3, t + dt);
-//
-//     x + (k1 + 2.0*k2 + 2.0*k3 + k4) * (dt / 6.0)
+// float euler(global float* field, float o, float x, float y, float t, float dt,
+//     double offset_x, double offset_y, unsigned int rows, unsigned int columns) {
+//     return o + bicubic_interpolate(x, y, field, offset_x, offset_y, rows, columns) * dt;
 // }
+//
+// // float runge_kutta_4(float o, float x, float y, global float* field, double offset_x, double offset_y, unsigned int rows, unsigned int columns) {
+// //
+// //     float k1 = bicubic_interpolate(x    , y, t);
+// //     let k2 = f(x + (dt / 2.0)*k1, t + dt / 2.0);
+// //     let k3 = f(x + (dt / 2.0)*k2, t + dt / 2.0);
+// //     let k4 = f(x + dt*k3, t + dt);
+// //
+// //     x + (k1 + 2.0*k2 + 2.0*k3 + k4) * (dt / 6.0)
+// // }
 //
 // float catmull_rom_interpolate( float a, float b, float c, float d, float w )  {
 //     float minimum = min(d, min(c, min(b, a)));
@@ -57,10 +62,6 @@
 //
 // 	// interpolate across y-axis
 // 	return catmull_rom_interpolate(a, b, c, d, alpha )
-// }
-//
-// float integrate(float x, float y, global float* field, double offset_x, double offset_y, unsigned int rows, unsigned int columns) {
-//     float
 // }
 //
 //

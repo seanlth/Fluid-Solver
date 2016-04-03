@@ -36,7 +36,7 @@ pub struct Visualiser {
 }
 
 impl Visualiser {
-	pub fn new() -> Visualiser {
+	pub fn new(rows: usize, columns: usize) -> Visualiser {
 		let vertex_shader_src = r#"
 			#version 140
 		  	in vec2 position;
@@ -58,8 +58,10 @@ impl Visualiser {
 			}
 		"#;
 
-		let d = glutin::WindowBuilder::new().build_glium().unwrap();
+        let x = 1280 / columns as u32;
 
+		let d = glutin::WindowBuilder::new().with_dimensions(columns as u32 * x, rows as u32 * x).build_glium().unwrap();
+        //let d = glutin::WindowBuilder::new().build_glium().unwrap();
 		Visualiser {
 			program: Program::from_source(&d, vertex_shader_src, fragment_shader_src, None).unwrap(),
 			display: d,

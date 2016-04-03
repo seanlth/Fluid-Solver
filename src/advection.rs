@@ -79,8 +79,8 @@ pub fn semi_lagrangian(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64
 //
 //     if let Ok((device, ctx, queue)) = opencl::util::create_compute_context_using_device(2) {
 //
-//         let mut new_x_buffer: CLBuffer<f32> = ctx.create_buffer(padded_x.len(), opencl::cl::CL_MEM_READ_WRITE);
-//         let mut x_buffer: CLBuffer<f32> = ctx.create_buffer(padded_x.len(), opencl::cl::CL_MEM_READ_WRITE);
+//         let mut field_buffer: CLBuffer<f32> = ctx.create_buffer(padded_x.len(), opencl::cl::CL_MEM_READ_WRITE);
+//         let mut u_buffer: CLBuffer<f32> = ctx.create_buffer(padded_x.len(), opencl::cl::CL_MEM_READ_WRITE);
 //         let b_buffer: CLBuffer<f32> = ctx.create_buffer(b.field.len(), opencl::cl::CL_MEM_READ_ONLY);
 //
 //         let new_x_slice: &Vec<f32> = &padded_x.clone().iter().map(|v| *v as f32).collect();
