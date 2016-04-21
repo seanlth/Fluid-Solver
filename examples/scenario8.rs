@@ -18,21 +18,9 @@ fn main() {
 
     let visualiser = Visualiser::new(solver.rows, solver.columns);
 
-    //for _ in 0..200 {
+    for _ in 0..200 {
         solver.solve();
         visualiser.draw_pressure(&solver.pressure);
-    //}
+    }
     visualiser.to_image("images/pressure.png");
-
-
-
-    // for _ in 0..200 {
-    //
-    //     solver.solve();
-    //     //visualiser.draw_vector_field(&solver.velocity_x, &solver.velocity_y, 30, 30);
-    //     //println!("{}", solver.velocity_x.at(32, 50));
-    //     visualiser.draw_markers(&solver.particles, &solver.velocity_x, &solver.velocity_y);
-    //     //visualiser.draw_pressure(&solver.pressure);
-    // }
-    //visualiser.to_image("images/screen_shot.png");
 }

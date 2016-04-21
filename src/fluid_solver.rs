@@ -107,30 +107,12 @@ impl FluidSolver {
             f.advect_kernel.create_buffer(f.velocity_y.field.len(), opencl::cl::CL_MEM_READ_ONLY);
         }
         else {
-            //println!("init {}", padded_v_columns*padded_v_rows);
-            // println!("init {}", f.velocity_x.field.len());
-            // println!("init {}", f.velocity_y.field.len());
 
             f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_ONLY);
             f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_WRITE);
             f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_ONLY);
             f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_ONLY);
         }
-
-
-        //
-        // let s1 = padded_columns1 * padded_rows1;
-        // let s2 = padded_columns2 * padded_rows1; // u
-        // let s3 = padded_columns1 * padded_rows2; // v
-        //
-        // //println!("{}", s1 );
-        // f.advect_kernel.create_buffer(s1, opencl::cl::CL_MEM_READ_ONLY);
-        // f.advect_kernel.create_buffer(s1, opencl::cl::CL_MEM_READ_WRITE);
-        // f.advect_kernel.create_buffer(s2, opencl::cl::CL_MEM_READ_ONLY);
-        // f.advect_kernel.create_buffer(s2, opencl::cl::CL_MEM_READ_WRITE);
-        // f.advect_kernel.create_buffer(s3, opencl::cl::CL_MEM_READ_ONLY);
-        // f.advect_kernel.create_buffer(s3, opencl::cl::CL_MEM_READ_WRITE);
-
 
         f.linear_solver_kernel.create_buffer((columns+2)*(rows*2), opencl::cl::CL_MEM_READ_WRITE);
         f.linear_solver_kernel.create_buffer((columns+2)*(rows*2), opencl::cl::CL_MEM_READ_WRITE);
@@ -172,9 +154,6 @@ impl FluidSolver {
 	// see diagram
 	pub fn pressure_solve(&mut self) {
 		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600, Some(&self.linear_solver_kernel) );
-        //linear_solvers::relaxation_fast_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600 );
-
-
 	}
 
 	pub fn solve(&mut self) {
@@ -202,15 +181,9 @@ impl FluidSolver {
             let f1 = |o: f64, t: f64| interpolation::bicubic_interpolate(o, y, &u);
             let f2 = |o: f64, t: f64| interpolation::bicubic_interpolate(x, o, &v);
 
-			// let u = interpolation::bicubic_interpolate(x, y, &self.velocity_x);
-			// let v = interpolation::bicubic_interpolate(x, y, &self.velocity_y);
-
             let x = (self.integration)(x, 0.0, &f1, self.dt);
             let y = (self.integration)(y, 0.0, &f2, self.dt);
             *p = (x, y);
-
-			//*p = integrators::euler(x, y, u, v, self.dt);
-            //*p = ( integrators::euler(x, 0.0, f1, self.dt), integrators::euler(y, 0.0, f2, self.dt) )
 
 		}
 	}
@@ -220,16 +193,9 @@ impl FluidSolver {
 		let u = self.velocity_x.clone();
 		let v = self.velocity_y.clone();
 
-        // println!("{}", self.velocity_x.columns);
-        // println!("{}", self.velocity_x.rows);
-
 		(self.advection)(&mut self.velocity_x, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, Some(&self.advect_kernel));
 		(self.advection)(&mut self.velocity_y, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, Some(&self.advect_kernel));
 		(self.advection)(&mut self.density, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, Some(&self.advect_kernel));
-
-        // advection::semi_lagrangian_opencl(&mut self.velocity_x, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, &self.advect_kernel);
-		// advection::semi_lagrangian_opencl(&mut self.velocity_y, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration,  &self.advect_kernel);
-		// advection::semi_lagrangian_opencl(&mut self.density, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration,  &self.advect_kernel);
 
 		self.advect_particles();
 	}
@@ -267,14 +233,12 @@ impl FluidSolver {
 		// apply pressure to velocity
 		for i in 0..self.rows+1 {
 			for j in 0..self.columns+1 {
-				//let p = i * self.columns + j;
 
 				let p1 = if j < self.columns && i < self.rows { self.pressure.at(i, j) } else { 0.0 };
 				let p2 = if i < self.rows && j < self.columns { self.pressure.at(i, j) } else { 0.0 };
 
 				let p3 = if j as i32 - 1 >= 0 && i < self.rows { self.pressure.at(i, j - 1) } else { 0.0 };
 				let p4 = if i as i32 - 1 >= 0 && j < self.columns { self.pressure.at(i - 1, j) } else { 0.0 };
-
 
 				if j <= self.columns && i < self.rows {
 					*self.velocity_x.at_mut(i, j) = self.velocity_x.at(i, j) - (self.dt / (self.fluid_density * self.dx)) * ( p1 - p3 );
@@ -289,46 +253,11 @@ impl FluidSolver {
 		self.set_boundaries();
 	}
 
-    // pub fn add_source(&mut self, r: usize, c: usize, w: usize, h: usize, velocity_x: f64, velocty_y: f64, density: f64) {
-    //     let start_r = cmp::max(r, 0);
-    //     let end_r = cmp::min(self.rows, r+h);
-    //
-    //     let start_c = cmp::max(c, 0);
-    //     let end_c = cmp::min(self.columns, c+w);
-    //
-    //     for i in start_r..end_r {
-    //         for j in start_c..end_c {
-    //             *self.velocity_x.at_mut(i, j) = velocity_x;
-    //             *self.velocity_y.at_mut(i, j) = velocty_y;
-    //             *self.density.at_mut(i, c) = density;
-    //         }
-    //     }
-    // }
 
 	pub fn add_source(&mut self, r: usize, c: usize, velocity_x: f64, velocity_y: f64, density: f64) {
 		*self.velocity_x.at_mut(r, c) = velocity_x;
-        //*self.velocity_y.at_mut(r, c) = velocity_y;
         *self.density.at_mut(r, c) = density;
-
-		//*self.velocity_x.at_mut(r, c) = velocity_x;
-		//*self.velocity_y.at_mut(r + 1, c) = velocty_y;
-		//*self.velocity_y.at_mut(r, c) = velocty_y;
-		// *self.density.at_mut(r, c) = density;
-        // *self.density.at_mut(r, c + 1) = density;
-        // *self.density.at_mut(r, c - 1) = density;
-        // *self.density.at_mut(r, c - 2) = density;
-        // *self.density.at_mut(r, c - 3) = density;
 	}
-
-	// pub fn print_variable(v: &Variable) {
-	// 	for i in v.values.iter().rev() {
-	// 		for j in i {
-	// 			print!("{:.*} ", 2,  *j);
-	// 		}
-	// 		println!("");
-	// 	}
-	// 	println!("");
-	// }
 
 	pub fn print_velocity(&self) {
 		println!("{{");
@@ -389,27 +318,4 @@ impl FluidSolver {
 
 		let _ = f.write_all(data.as_bytes());
 	}
-
-
-	// pub fn variable_image(v: &Variable, name: &str) {
-	// 	let mut temp = vec![];
-	// 	for i in v.values.iter().rev() {
-	// 		for j in i {
-	// 			temp.push(*j as u8);
-	// 			temp.push(*j as u8);
-	// 			temp.push(*j as u8);
-	// 			temp.push(*j as u8);
-	// 		}
-	// 	}
-	// 	//let _ = lodepng::encode_file(name, &temp, v.values[0].len() as usize, v.values.len() as usize, lodepng::LCT_RGB, 8);
-	// 	let _ = lodepng::encode32_file(name, &temp.as_slice(), v.values[0].len() as usize, v.values.len() as usize);
-	// }
-
-
 }
-
-// fn test() {
-// 	let mut solver = FluidSolver::new(1.0, 100, 100, 0.01, 1.0);
-// 	solver.solve();
-//
-// }

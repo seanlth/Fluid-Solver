@@ -8,24 +8,6 @@ use opencl::hl::*;
 
 use opencl_kernel::OpenCLKernel;
 
-// pub fn setup_advection_kernel() -> Result<(Device, Context, CommandQueue, Kernel), String> {
-//     let ker = include_str!("kernels.cl");
-//
-//     if let Ok((device, ctx, queue)) = opencl::util::create_compute_context_using_device(2) {
-//
-//         let program = ctx.create_program_from_source(ker);
-//         let info = program.build(&device);
-//         if let Result::Err(s) = info {
-//             println!("{}", s);
-//             return Err(s.to_string());
-//         }
-//
-//         let kernel = program.create_kernel("semi_lagrangian");
-//         return Ok((device, ctx, queue, kernel))
-//     }
-//     Err("Error".to_string())
-// }
-
 
 // template advection
 pub fn empty_advection(field: &mut Field, u: &Field, v: &Field, dt: f64, dx: f64, interpolator: &Fn(f64, f64, &Field) -> f64, integrator: &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64, kernel: Option<&OpenCLKernel>) {
@@ -143,148 +125,82 @@ pub fn semi_lagrangian_opencl(field: &mut Field, u: &Field, v: &Field, dt: f64, 
     }
 
 
-
-    // columns = columns + remainder_columns;
-    // rows = rows + remainder_rows;
-
-    //}
-
-    // if rows % 32 != 0 {
-    //     let remainder = 32 - rows % 32;
-    //     padded_field.append(&mut vec![0.0; remainder * columns]);
-    //     // for r in 0..rows+remainder {
-    //     //     for c in 0..field.columns {
-    //     //         if r >= rows {
-    //     //             padded_field.push(0.0);
-    //     //         }
-    //     //         else {
-    //     //             padded_field.push(field.at_fast(r, c)); // offset
-    //     //         }
-    //     //     }
-    //     // }
-    //     rows = rows + remainder;
-    // }
-    //
-    // if field.rows % 32 == 0 && field.columns % 32 == 0 {
-    //     padded_field = field.field.clone();
-    // }
-
-    // println!("old rows {:?}", rows);
-    // println!("old columns {:?}", columns);
-    //
-    // println!("new rows {:?}", padded_rows);
-    // println!("new columns {:?}", padded_columns);
-
-    //println!("{:?}", padded_field.len());
-
-    //let ker = include_str!("kernels.cl");
-
-    //if let Ok((device, ctx, queue)) = opencl::util::create_compute_context_using_device(2) {
-
-        // let field_buffer: CLBuffer<f32> = ctx.create_buffer(padded_field.len(), opencl::cl::CL_MEM_READ_ONLY);
-        // let temp_buffer: CLBuffer<f32> = ctx.create_buffer(padded_field.len(), opencl::cl::CL_MEM_READ_WRITE);
-        // let u_buffer: CLBuffer<f32> = ctx.create_buffer(padded_u.len(), opencl::cl::CL_MEM_READ_ONLY);
-        // let v_buffer: CLBuffer<f32> = ctx.create_buffer(padded_v.len(), opencl::cl::CL_MEM_READ_ONLY);
-
-        // let field_buffer1 = &opencl_kernel.unwrap().buffers[0];
-        // let temp_buffer1 = &opencl_kernel.unwrap().buffers[1];
-        // let field_buffer2 = &opencl_kernel.unwrap().buffers[2];
-        // let temp_buffer2 = &opencl_kernel.unwrap().buffers[3];
-        // let field_buffer3 = &opencl_kernel.unwrap().buffers[4];
-        // let temp_buffer3 = &opencl_kernel.unwrap().buffers[5];
-        //
-        // let u_buffer = &opencl_kernel.unwrap().buffers[6];
-        // let v_buffer = &opencl_kernel.unwrap().buffers[7];
-
-        let field_slice: &Vec<f32> = &padded_field.clone().iter().map(|v| *v as f32).collect();
-        let temp_slice: &Vec<f32> = &padded_field.clone().iter().map(|v| *v as f32).collect();
-        let u_slice: &Vec<f32> = &padded_u.clone().iter().map(|v| *v as f32).collect();
-        let v_slice: &Vec<f32> = &padded_v.clone().iter().map(|v| *v as f32).collect();
+    let field_slice: &Vec<f32> = &padded_field.clone().iter().map(|v| *v as f32).collect();
+    let temp_slice: &Vec<f32> = &padded_field.clone().iter().map(|v| *v as f32).collect();
+    let u_slice: &Vec<f32> = &padded_u.clone().iter().map(|v| *v as f32).collect();
+    let v_slice: &Vec<f32> = &padded_v.clone().iter().map(|v| *v as f32).collect();
 
 
-        let field_buffer: &CLBuffer<f32>;
-        let temp_buffer: &CLBuffer<f32>;
-        let u_buffer: &CLBuffer<f32>;
-        let v_buffer: &CLBuffer<f32>;
+    let field_buffer: &CLBuffer<f32>;
+    let temp_buffer: &CLBuffer<f32>;
+    let u_buffer: &CLBuffer<f32>;
+    let v_buffer: &CLBuffer<f32>;
 
-        // invoked with u
-        if rows == u.rows && columns == u.columns {
-            field_buffer = &opencl_kernel.unwrap().buffers[4];
-            temp_buffer = &opencl_kernel.unwrap().buffers[5];
-            u_buffer = &opencl_kernel.unwrap().buffers[6];
-            v_buffer = &opencl_kernel.unwrap().buffers[7];
-        }
-        else if rows == v.rows && columns == v.columns { // invoked with v
-            
-            field_buffer = &opencl_kernel.unwrap().buffers[8];
-            temp_buffer = &opencl_kernel.unwrap().buffers[9];
-            u_buffer = &opencl_kernel.unwrap().buffers[10];
-            v_buffer = &opencl_kernel.unwrap().buffers[11];
-        }
-        else { // invoked with field
-            field_buffer = &opencl_kernel.unwrap().buffers[0];
-            temp_buffer = &opencl_kernel.unwrap().buffers[1];
-            u_buffer = &opencl_kernel.unwrap().buffers[2];
-            v_buffer = &opencl_kernel.unwrap().buffers[3];
-        }
+    // invoked with u
+    if rows == u.rows && columns == u.columns {
+        field_buffer = &opencl_kernel.unwrap().buffers[4];
+        temp_buffer = &opencl_kernel.unwrap().buffers[5];
+        u_buffer = &opencl_kernel.unwrap().buffers[6];
+        v_buffer = &opencl_kernel.unwrap().buffers[7];
+    }
+    else if rows == v.rows && columns == v.columns { // invoked with v
 
-        queue.write(field_buffer, &&field_slice[..], ());
-        queue.write(temp_buffer, &&temp_slice[..], ());
-        queue.write(u_buffer, &&u_slice[..], ());
-        queue.write(v_buffer, &&v_slice[..], ());
+        field_buffer = &opencl_kernel.unwrap().buffers[8];
+        temp_buffer = &opencl_kernel.unwrap().buffers[9];
+        u_buffer = &opencl_kernel.unwrap().buffers[10];
+        v_buffer = &opencl_kernel.unwrap().buffers[11];
+    }
+    else { // invoked with field
+        field_buffer = &opencl_kernel.unwrap().buffers[0];
+        temp_buffer = &opencl_kernel.unwrap().buffers[1];
+        u_buffer = &opencl_kernel.unwrap().buffers[2];
+        v_buffer = &opencl_kernel.unwrap().buffers[3];
+    }
 
-        // let program = ctx.create_program_from_source(ker);
-        // let info = program.build(&device);
-        // if let Result::Err(s) = info {
-        //     println!("{}", s);
-        //     panic!()
-        // }
-        //
-        // let kernel = program.create_kernel("semi_lagrangian");
+    queue.write(field_buffer, &&field_slice[..], ());
+    queue.write(temp_buffer, &&temp_slice[..], ());
+    queue.write(u_buffer, &&u_slice[..], ());
+    queue.write(v_buffer, &&v_slice[..], ());
 
-        kernel.set_arg(0, field_buffer);
-        kernel.set_arg(1, temp_buffer);
-        kernel.set_arg(2, u_buffer);
-        kernel.set_arg(3, v_buffer);
-        kernel.set_arg(4, &(dt as f32));
-        kernel.set_arg(5, &(dx as f32));
-        kernel.set_arg(6, &(field.offset_x as f32));
-        kernel.set_arg(7, &(field.offset_y as f32));
-        kernel.set_arg(8, &padded_rows);
-        kernel.set_arg(9, &padded_columns);
-        kernel.set_arg(10, &(u.offset_x as f32));
-        kernel.set_arg(11, &(u.offset_y as f32));
-        kernel.set_arg(12, &padded_u_rows);
-        kernel.set_arg(13, &padded_u_columns);
-        kernel.set_arg(14, &(v.offset_x as f32));
-        kernel.set_arg(15, &(v.offset_y as f32));
-        kernel.set_arg(16, &padded_v_rows);
-        kernel.set_arg(17, &padded_v_columns);
+    kernel.set_arg(0, field_buffer);
+    kernel.set_arg(1, temp_buffer);
+    kernel.set_arg(2, u_buffer);
+    kernel.set_arg(3, v_buffer);
+    kernel.set_arg(4, &(dt as f32));
+    kernel.set_arg(5, &(dx as f32));
+    kernel.set_arg(6, &(field.offset_x as f32));
+    kernel.set_arg(7, &(field.offset_y as f32));
+    kernel.set_arg(8, &padded_rows);
+    kernel.set_arg(9, &padded_columns);
+    kernel.set_arg(10, &(u.offset_x as f32));
+    kernel.set_arg(11, &(u.offset_y as f32));
+    kernel.set_arg(12, &padded_u_rows);
+    kernel.set_arg(13, &padded_u_columns);
+    kernel.set_arg(14, &(v.offset_x as f32));
+    kernel.set_arg(15, &(v.offset_y as f32));
+    kernel.set_arg(16, &padded_v_rows);
+    kernel.set_arg(17, &padded_v_columns);
 
-        let event = queue.enqueue_async_kernel(&kernel, (padded_rows, padded_rows), (0, 0), Some((group_size_columns, group_size_rows)), ());
+    let event = queue.enqueue_async_kernel(&kernel, (padded_rows, padded_rows), (0, 0), Some((group_size_columns, group_size_rows)), ());
 
-        unsafe { opencl::cl::ll::clFinish(queue.cqueue) };
-        let result: Vec<f32> = queue.get(temp_buffer, &event);
+    unsafe { opencl::cl::ll::clFinish(queue.cqueue) };
+    let result: Vec<f32> = queue.get(temp_buffer, &event);
 
-        //if columns != padded_columns {
-            //println!("columns");
-            for r in 0..rows {
-                for c in 0..columns {
-                    *field.at_mut(r, c) = result[r * (padded_columns) + c] as f64;
-                }
+    if columns != padded_columns {
+        for r in 0..rows {
+            for c in 0..columns {
+                *field.at_mut(r, c) = result[r * (padded_columns) + c] as f64;
             }
-        // }
-        // else if rows != padded_rows {
-        //     //println!("rows");
-        //     for r in 0..rows {
-        //         for c in 0..columns {
-        //             *field.at_mut(r, c) = result[r * (columns) + c] as f64;
-        //         }
-        //     }
-        // }
-        // else {
-        //     //println!("none");
-        //     field.field = result.into_iter().map(|v| v as f64).collect();
-        // }
-    //}
+        }
+    }
+    else if rows != padded_rows {
+        for r in 0..rows {
+            for c in 0..columns {
+                *field.at_mut(r, c) = result[r * (columns) + c] as f64;
+            }
+        }
+    }
+    else {
+        field.field = result.into_iter().map(|v| v as f64).collect();
+    }
 }

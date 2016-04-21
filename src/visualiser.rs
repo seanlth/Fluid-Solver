@@ -65,11 +65,9 @@ impl Visualiser {
 			}
 		"#;
 
-        //let x = 1280 / columns as u32;
         let x = 8.0 as u32;
 
 		let d = glutin::WindowBuilder::new().with_dimensions(columns as u32 * x, rows as u32 * x).build_glium().unwrap();
-        //let d = glutin::WindowBuilder::new().build_glium().unwrap();
 		Visualiser {
 			program: Program::from_source(&d, vertex_shader_src, fragment_shader_src, None).unwrap(),
 			display: d,
@@ -123,9 +121,6 @@ impl Visualiser {
     }
 
     pub fn draw_pressure(&self, pressure: &Field) {
-
-        //let max = pressure.field.iter().cloned().fold(0./0., f64::max);
-        //let min = pressure.field.iter().cloned().fold(0./0., f64::min);
 
         let min = pressure.rows as f64 * -4.9;
         let max = pressure.rows as f64 * 4.9;
@@ -209,88 +204,6 @@ impl Visualiser {
 
 
 	}
-
-    // pub fn draw_velocity(&self, velocity_x: &Field, velocty_y: &Field) {
-    //
-	// 	let pressure_flat: Vec<f32> = pressure.clone()
-	// 								.map(|v| { let (r, g, b) = Visualiser::grey_to_jet(v, min, max); vec![r as f32, g as f32, b as f32] } )
-	// 								.collect::<Vec<Vec<f32>>>()
-	// 								.iter()
-	// 								.flat_map(|a| a.clone())
-	// 								.collect();
-    //
-	// 	let (w, h) = (pressure.columns as u32, pressure.rows as u32);
-    //
-	// 	let raw = RawImage2d {
-	// 		data: Cow::Owned(pressure_flat),
-	// 		width: w,
-	// 		height: h,
-	// 		format: ClientFormat::F32F32F32
-	// 	};
-    //
-	// 	let opengl_texture = glium::texture::Texture2d::new(&self.display, raw).unwrap();
-    //
-	// 	let vertex_buffer = {
-	//         #[derive(Copy, Clone)]
-	//         struct Vertex2 {
-	//             position: [f32; 2],
-	//             tex_coords: [f32; 2],
-	//         }
-    //
-	//         implement_vertex!(Vertex2, position, tex_coords);
-    //
-	//         glium::VertexBuffer::new(&self.display,
-	//             &[
-	//                 Vertex2 { position: [-1.0, -1.0], tex_coords: [0.0, 0.0] },
-	//                 Vertex2 { position: [-1.0,  1.0], tex_coords: [0.0, 1.0] },
-	//                 Vertex2 { position: [ 1.0,  1.0], tex_coords: [1.0, 1.0] },
-	//                 Vertex2 { position: [ 1.0, -1.0], tex_coords: [1.0, 0.0] }
-	//             ]
-	//         ).unwrap()
-    // 	};
-	// 	let index_buffer = glium::IndexBuffer::new(&self.display, index::PrimitiveType::TriangleStrip, &[1 as u16, 2, 0, 3]).unwrap();
-	// 	let program = program!(&self.display,
-	//     	140 => {
-	// 		   vertex: "
-	// 			   #version 140
-	// 			   uniform mat4 matrix;
-	// 			   in vec2 position;
-	// 			   in vec2 tex_coords;
-	// 			   out vec2 v_tex_coords;
-	// 			   void main() {
-	// 				   gl_Position = matrix * vec4(position, 0.0, 1.0);
-	// 				   v_tex_coords = tex_coords;
-	// 			   }
-	// 		   ",
-    //
-	// 		   fragment: "
-	// 			   #version 140
-	// 			   uniform sampler2D tex;
-	// 			   in vec2 v_tex_coords;
-	// 			   out vec4 f_color;
-	// 			   void main() {
-	// 				   f_color = texture(tex, v_tex_coords);
-	// 			   }
-	// 		   "
-	// 	   }).unwrap();
-	// 	   let uniforms = uniform! {
-	// 	   matrix: [
-	// 		   [1.0, 0.0, 0.0, 0.0],
-	// 		   [0.0, 1.0, 0.0, 0.0],
-	// 		   [0.0, 0.0, 1.0, 0.0],
-	// 		   [0.0, 0.0, 0.0, 1.0f32]
-	// 	   ],
-	// 	   tex: &opengl_texture
-	//    };
-    //
-	//    // drawing a frame
-	//    let mut target = self.display.draw();
-	//    target.clear_color(0.0, 0.0, 0.0, 1.0);
-	//    target.draw(&vertex_buffer, &index_buffer, &program, &uniforms, &Default::default()).unwrap();
-	//    target.finish().unwrap();
-    //
-    //
-	// }
 
     pub fn draw_density(&self, density: &Field) {
 
@@ -541,12 +454,8 @@ impl Visualiser {
 		let mut temp = vec![];
 		for i in (0..density.field.len()).rev() {
             temp.push(255 - ( density.field[i] ) as u8 );
-            //temp.push( (*i ) as u8 );
-            //temp.push( (*i ) as u8 );
-            //temp.push( (*i * 1000.0) as u8 );
 		}
 
-		//let _ = lodepng::encode24_file(name, &temp.as_slice(), density.columns as usize, density.rows as usize);
         let _ = lodepng::encode_file(name, &temp.as_slice(), density.columns as usize, density.rows as usize, lodepng::LCT_GREY, 8);
 	}
 
@@ -594,19 +503,8 @@ impl Visualiser {
                     position: [ px1, py1 ],
                     colour: [ r, g, b, 1.0 ]
                 } );
-
-                // ps.push( Vertex {
-                //     position: [ ((2.0 * x as f64)  / x_resolution as f64 ) - 1.0 , ((2.0 * y as f64) / y_resolution as f64) - 1.0 ],
-                //     colour: [ r, g, b, 1.0 ]
-                // } );
-                // ps.push( Vertex {
-                //     position: [ ((2.0 * x as f64)  / x_resolution as f64 ) - 1.0 + u_x/length_scaler, ((2.0 * y as f64) / y_resolution as f64) - 1.0 + v_y/length_scaler],
-                //     colour: [ r, g, b, 1.0 ]
-                // } );
-
             }
 		}
-        //let c: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
         let vertex_buffer = VertexBuffer::new(&self.display, &ps).unwrap();
         let indices = index::NoIndices(index::PrimitiveType::TrianglesList);
@@ -639,10 +537,6 @@ impl Visualiser {
                 colour: [ r, g, b, 1.0 ]
              } )
 		}
-
-
-		//let c: [f32; 4] = [1.0, 1.0, 0.0, 1.0];
-		//let c1: [f32; 4] = if c { [1.0, 0.0, 0.0, 1.0] } else { [0.0, 0.0, 0.0, 1.0] };
 
 		let vertex_buffer = VertexBuffer::new(&self.display, &ps).unwrap();
         let indices = index::NoIndices(index::PrimitiveType::Points);

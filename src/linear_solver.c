@@ -76,13 +76,6 @@ void relaxation_fast_ffi( double* array, double* b, unsigned int w, unsigned int
         }
     }
 
-    // for (int i = 0; i < h+2; i++) {
-    //     for (int j = 0; j < w+2; j++) {
-    //         printf("%f ", array[i*(w+2) + j]);
-    //     }
-    //     printf("\n");
-    // }
-
 }
 
 

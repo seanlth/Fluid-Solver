@@ -8,6 +8,7 @@ use Fluids::advection;
 use Fluids::integrators;
 use Fluids::linear_solvers;
 
+
 fn main() {
     let mut solver:FluidSolver = FluidSolver::new(1.0, 64, 64, 0.01, 1.0, 0.0)
                                    .use_markers()
@@ -23,10 +24,6 @@ fn main() {
     for _ in 0..200 {
 
         solver.solve();
-        //visualiser.draw_vector_field(&solver.velocity_x, &solver.velocity_y, 30, 30);
-        //println!("{}", solver.velocity_x.at(32, 50));
         visualiser.draw_markers(&solver.particles, &solver.velocity_x, &solver.velocity_y);
-        //visualiser.draw_pressure(&solver.pressure);
     }
-    //visualiser.to_image("images/screen_shot.png");
 }

@@ -8,24 +8,24 @@ use Fluids::advection;
 use Fluids::integrators;
 use Fluids::linear_solvers;
 
-// pressure
+// vector field demo
 fn main() {
-    let mut solver:FluidSolver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0, 0.0)
+    let mut solver:FluidSolver = FluidSolver::new(1.0, 64, 128, 0.01, 1.0, 0.0)
                                    .advection(advection::semi_lagrangian)
                                    .interpolation(interpolation::bilinear_interpolate)
                                    .integration(integrators::euler)
                                    .linear_solver(linear_solvers::relaxation_fast_c);
     let visualiser = Visualiser::new(solver.rows, solver.columns);
 
-    for i in 0..1001 {
-        *solver.velocity_x.at_mut(64, 40) = 200.0;
+    for i in 0..400 {
+        *solver.velocity_x.at_mut(32, 40) = 200.0;
 
         solver.solve();
         visualiser.draw_vector_field(&solver.velocity_x, &solver.velocity_y, 120, 120);
 
-        if i % 200 == 0 {
-            let s = format!("images/vector_field{}.png", i);
-            visualiser.to_image(&*s);
-        }
+        // if i % 200 == 0 {
+        //     let s = format!("images/vector_field{}.png", i);
+        //     visualiser.to_image(&*s);
+        // }
     }
 }

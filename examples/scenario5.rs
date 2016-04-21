@@ -8,6 +8,8 @@ use Fluids::advection;
 use Fluids::integrators;
 use Fluids::linear_solvers;
 
+// particle visualiser, iamge generator
+
 fn main() {
     let mut solver:FluidSolver = FluidSolver::new(1.0, 128, 128, 0.01, 1.0, 0.0)
                                    .use_markers()

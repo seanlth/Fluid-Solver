@@ -297,159 +297,119 @@ pub fn relaxation_opencl(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f6
     }
     padded_x.append(&mut vec![0.0; columns+2]);
 
-    //let ker = include_str!("kernels.cl");
+    let mut new_x_buffer = &opencl_kernel.unwrap().buffers[0];
+    let mut x_buffer = &opencl_kernel.unwrap().buffers[1];
+    let b_buffer = &opencl_kernel.unwrap().buffers[2];
 
-    //if let Ok((device, ctx, queue)) = opencl::util::create_compute_context_using_device(2) {
+    let new_x_slice: &Vec<f32> = &padded_x.clone().iter().map(|v| *v as f32).collect();
+    let x_slice: &Vec<f32> = &padded_x.clone().iter().map(|v| *v as f32).collect();
+    let b_slice: &Vec<f32> = &b.field.clone().iter().map(|v| *v as f32).collect();
 
-        // let mut new_x_buffer: CLBuffer<f32> = ctx.create_buffer(padded_x.len(), opencl::cl::CL_MEM_READ_WRITE);
-        // let mut x_buffer: CLBuffer<f32> = ctx.create_buffer(padded_x.len(), opencl::cl::CL_MEM_READ_WRITE);
-        // let b_buffer: CLBuffer<f32> = ctx.create_buffer(b.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+    queue.write(new_x_buffer, &&new_x_slice[..], ());
+    queue.write(x_buffer, &&x_slice[..], ());
+    queue.write(b_buffer, &&b_slice[..], ());
 
-        let mut new_x_buffer = &opencl_kernel.unwrap().buffers[0];
-        let mut x_buffer = &opencl_kernel.unwrap().buffers[1];
-        let b_buffer = &opencl_kernel.unwrap().buffers[2];
 
-        let new_x_slice: &Vec<f32> = &padded_x.clone().iter().map(|v| *v as f32).collect();
-        let x_slice: &Vec<f32> = &padded_x.clone().iter().map(|v| *v as f32).collect();
-        let b_slice: &Vec<f32> = &b.field.clone().iter().map(|v| *v as f32).collect();
+    kernel.set_arg(0, new_x_buffer);
+    kernel.set_arg(1, x_buffer);
+    kernel.set_arg(2, b_buffer);
+    kernel.set_arg(3, &x.columns);
+    kernel.set_arg(4, &x.rows);
+    kernel.set_arg(5, &(density as f32));
+    kernel.set_arg(6, &(dt as f32));
+    kernel.set_arg(7, &(dx as f32));
 
-        //println!("{}", new_x_slice.len());
+    let mut event = queue.enqueue_async_kernel(&kernel, (x.columns, x.rows), (1, 1), Some((group_size_columns, group_size_rows)), ());
 
-        queue.write(new_x_buffer, &&new_x_slice[..], ());
-        queue.write(x_buffer, &&x_slice[..], ());
-        queue.write(b_buffer, &&b_slice[..], ());
+    mem::swap(&mut x_buffer, &mut new_x_buffer);
 
-        // let program = ctx.create_program_from_source(ker);
-        // let info = program.build(&device);
-        // let info = program.build(&device);
-        // if let Result::Err(s) = info {
-        //     println!("{}", s);
-        //     panic!()
-        // }
-        //
-        // let kernel = program.create_kernel("relaxation");
+    let mut i = 0;
+    while i < limit - 1 {
 
-        let s: f32 = 1.0;
-        //kernel.set_local(0, x.field.len(), &s);
-        //kernel.set_local(1, group_size_columns * group_size_rows, &s);
-        // kernel.set_arg(0, new_x_buffer);
-        // kernel.set_arg(1, x_buffer);
-        // kernel.set_arg(2, b_buffer);
-        // kernel.set_arg(3, &x.columns);
-        // kernel.set_arg(4, &x.rows);
-        // kernel.set_arg(5, &(density as f32));
-        // kernel.set_arg(6, &(dt as f32));
-        // kernel.set_arg(7, &(dx as f32));
+        kernel.set_arg(0, x_buffer);
+        kernel.set_arg(1, new_x_buffer);
+        kernel.set_arg(2, b_buffer);
+        kernel.set_arg(3, &x.columns);
+        kernel.set_arg(4, &x.rows);
+        kernel.set_arg(5, &(density as f32));
+        kernel.set_arg(6, &(dt as f32));
+        kernel.set_arg(7, &(dx as f32));
 
-        //let mut event = queue.enqueue_async_kernel(&kernel, (x.columns, x.rows), (1, 1), Some((group_size_columns, group_size_rows)), ());
 
+        event = queue.enqueue_async_kernel(&kernel, (x.columns, x.rows), (1, 1), Some((group_size_columns, group_size_rows)), ());
         mem::swap(&mut x_buffer, &mut new_x_buffer);
+        i += 1;
+    }
+    unsafe { opencl::cl::ll::clFlush(queue.cqueue) };
+    unsafe { opencl::cl::ll::clFinish(queue.cqueue) };
+    let result: Vec<f32> = if limit % 2 == 1 {
+        queue.get(new_x_buffer, &event)
+    }
+    else {
+        queue.get(x_buffer, &event)
+    };
 
-        // let mut i = 0;
-        // while i < limit - 1 {
-        //     //if i % 2 == 0 {
-        //         //kernel.set_local(0, x.field.len(), &s);
-        //         //kernel.set_local(1, group_size_columns * group_size_rows, &s);
-        //         kernel.set_arg(0, x_buffer);
-        //         kernel.set_arg(1, new_x_buffer);
-        //         kernel.set_arg(2, b_buffer);
-        //         kernel.set_arg(3, &x.columns);
-        //         kernel.set_arg(4, &x.rows);
-        //         kernel.set_arg(5, &(density as f32));
-        //         kernel.set_arg(6, &(dt as f32));
-        //         kernel.set_arg(7, &(dx as f32));
-        //     //}
-        //     // else {
-        //     //     //kernel.set_local(0, x.field.len(), &s);
-        //     //     //kernel.set_local(1, group_size_columns * group_size_rows, &s);
-        //     //     kernel.set_arg(0, &new_x_buffer);
-        //     //     kernel.set_arg(1, &x_buffer);
-        //     //     kernel.set_arg(2, &b_buffer);
-        //     //     kernel.set_arg(3, &x.columns);
-        //     //     kernel.set_arg(4, &x.rows);
-        //     //     kernel.set_arg(5, &(density as f32));
-        //     //     kernel.set_arg(6, &(dt as f32));
-        //     //     kernel.set_arg(7, &(dx as f32));
-        //     // }
-        //
-        //     event = queue.enqueue_async_kernel(&kernel, (x.columns, x.rows), (1, 1), Some((group_size_columns, group_size_rows)), ());
-        //     mem::swap(&mut x_buffer, &mut new_x_buffer);
-        //     i += 1;
-        // }
-        // unsafe { opencl::cl::ll::clFlush(queue.cqueue) };
-        // unsafe { opencl::cl::ll::clFinish(queue.cqueue) };
-        // let result: Vec<f32> = if limit % 2 == 1 {
-        //     queue.get(new_x_buffer, &event)
-        // }
-        // else {
-        //     queue.get(x_buffer, &event)
-        // };
-        //
-        // for r in 1..rows+1 {
-        //     for c in 1..columns+1 {
-        //         x.field[(r-1) * columns + (c-1) ] = result[r * (columns+2) + c] as f64;
-        //     }
-        // }
+    for r in 1..rows+1 {
+        for c in 1..columns+1 {
+            x.field[(r-1) * columns + (c-1) ] = result[r * (columns+2) + c] as f64;
+        }
+    }
 
-        //println!("asd");
-
-    //}
-    //}
 }
-//
-//
-// pub fn threaded_relaxation_unchecked(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) {
-//
-//     let temp = &mut x.clone();
-//
-//     let x_clone = &x.clone();
-//
-//     let w = x.columns;
-//     let h = x.rows;
-//
-//     let threads = 8;
-//     let size = (w * h) / threads;
-//
-//     let mut pool = Pool::new(threads as u32);
-//
-//     for _ in 0..limit {
-//
-//         let mut j = 0;
-//         let _ = pool.scoped(|scope| {
-//             for chunk in &mut temp.field.chunks_mut(size) {
-//                 scope.execute(move || {
-//                     //let s = chunk.len();
-//                     for (k, chunk2) in chunk.chunks_mut(w).enumerate() {
-//                         let r = ( k + j*size ) / w;
-//                     for (c, e) in chunk2.iter_mut().enumerate() {
-//                         //let r = (c + j*size) / w;
-//                         // let c = (j + i*size) % w;
-//
-//                         //     |p3|
-//                         //  ---|--|---
-//                         //  p1 |  | p2
-//                         //  ---|--|---
-//                         //     |p4|
-//
-//
-//                         let mut alpha = 4.0;
-//
-//                         let p1 = if c as i32 - 1 >= 0 { x_clone.at_fast(r, c-1) } else { alpha -= 1.0; 0.0 } * (dt / ( density * dx * dx ));
-//                         let p2 = if c as i32 + 1 < w as i32 { x_clone.at_fast(r, c+1) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
-//                         let p3 = if r as i32 + 1 < h as i32 { x_clone.at_fast(r+1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
-//                         let p4 = if r as i32 - 1 >= 0 { x_clone.at_fast(r-1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
-//
-//                         *e = ( b.at_fast(r, c) + p1 + p2 + p3 + p4 ) / (alpha * (dt / ( density * dx * dx )));
-//                     }
-//                     }
-//                 });
-//             }
-//             j += 1;
-//         });
-//         *x = temp.clone();
-//     }
 
-//}
+
+pub fn threaded_relaxation_unchecked(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) {
+
+    let temp = &mut x.clone();
+
+    let x_clone = &x.clone();
+
+    let w = x.columns;
+    let h = x.rows;
+
+    let threads = 8;
+    let size = (w * h) / threads;
+
+    let mut pool = Pool::new(threads as u32);
+
+    for _ in 0..limit {
+
+        let mut j = 0;
+        let _ = pool.scoped(|scope| {
+            for chunk in &mut temp.field.chunks_mut(size) {
+                scope.execute(move || {
+                    //let s = chunk.len();
+                    for (k, chunk2) in chunk.chunks_mut(w).enumerate() {
+                        let r = ( k + j*size ) / w;
+                    for (c, e) in chunk2.iter_mut().enumerate() {
+                        //let r = (c + j*size) / w;
+                        // let c = (j + i*size) % w;
+
+                        //     |p3|
+                        //  ---|--|---
+                        //  p1 |  | p2
+                        //  ---|--|---
+                        //     |p4|
+
+
+                        let mut alpha = 4.0;
+
+                        let p1 = if c as i32 - 1 >= 0 { x_clone.at_fast(r, c-1) } else { alpha -= 1.0; 0.0 } * (dt / ( density * dx * dx ));
+                        let p2 = if c as i32 + 1 < w as i32 { x_clone.at_fast(r, c+1) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+                        let p3 = if r as i32 + 1 < h as i32 { x_clone.at_fast(r+1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+                        let p4 = if r as i32 - 1 >= 0 { x_clone.at_fast(r-1, c) } else { alpha-=1.0; 0.0 } * (dt / ( density * dx * dx ));
+
+                        *e = ( b.at_fast(r, c) + p1 + p2 + p3 + p4 ) / (alpha * (dt / ( density * dx * dx )));
+                    }
+                    }
+                });
+            }
+            j += 1;
+        });
+        *x = temp.clone();
+    }
+
+}
 
 
 pub fn jacobi(a: fn(i32, i32, i32) -> f64, x: &mut Vec<f64>, b: &Vec<f64>, n: i32) {
