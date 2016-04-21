@@ -17,18 +17,21 @@ use glium::texture::{RawImage2d, ClientFormat};
 use fluid_solver::FluidSolver;
 use std::ops::Deref;
 use std::borrow::Cow;
+use std::f64::consts::PI;
 use std::borrow;
 use field::Field;
 
+use interpolation;
 
 
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
 	pub position: [f64; 2],
+    pub colour: [f32; 4]
 }
 
-implement_vertex!(Vertex, position);
+implement_vertex!(Vertex, position, colour);
 
 pub struct Visualiser {
 	display: GlutinFacade,
@@ -40,10 +43,14 @@ impl Visualiser {
 		let vertex_shader_src = r#"
 			#version 140
 		  	in vec2 position;
+            in vec4 colour;
+
+            out vec4 colour_out;
 
 		  	void main() {
 				gl_PointSize = 500.0;
 				gl_Position = vec4(position, 0.0, 1.0);
+                colour_out = colour;
 		  	}
 		"#;
 
@@ -51,14 +58,15 @@ impl Visualiser {
 			#version 140
 			out vec4 color;
 
-			uniform vec4 colour;
+			in vec4 colour_out;
 
 			void main() {
-		 		color = colour;
+		 		color = colour_out;
 			}
 		"#;
 
-        let x = 1280 / columns as u32;
+        //let x = 1280 / columns as u32;
+        let x = 8.0 as u32;
 
 		let d = glutin::WindowBuilder::new().with_dimensions(columns as u32 * x, rows as u32 * x).build_glium().unwrap();
         //let d = glutin::WindowBuilder::new().build_glium().unwrap();
@@ -67,6 +75,22 @@ impl Visualiser {
 			display: d,
 		}
 	}
+
+    pub fn to_image(&self, name: &str) {
+        let pixels: Vec<Vec<(u8, u8, u8, u8)>> = self.display.read_front_buffer();
+        let mut temp = vec![];
+
+        let rows: usize = pixels.len();
+        let columns: usize = pixels[0].len();
+
+		for i in 0..rows {
+            for j in 0..columns {
+                temp.push(pixels[i][j]);
+		    }
+        }
+
+		let _ = lodepng::encode32_file(name, &temp.as_slice(), columns, rows);
+    }
 
     fn grey_to_jet(mut v: f64, min: f64, max: f64) -> (f32, f32, f32)
     {
@@ -526,19 +550,98 @@ impl Visualiser {
         let _ = lodepng::encode_file(name, &temp.as_slice(), density.columns as usize, density.rows as usize, lodepng::LCT_GREY, 8);
 	}
 
-	pub fn draw_markers(&self, points: &Vec<(f64, f64)>, width: usize, height: usize) {
-
+    pub fn draw_vector_field(&self, u: &Field, v: &Field, x_resolution: u32, y_resolution: u32) {
 		let (pw, ph): (u32, u32) = self.display.get_window().unwrap().deref().get_inner_size_pixels().unwrap();
+
+        let cols = v.columns as f64;
+        let rows = u.rows as f64;
+
+        let mut ps = Vec::new();
+
+
+		for x in 0..x_resolution {
+            for y in 0..y_resolution {
+                let mut u_x = interpolation::bilinear_interpolate(cols * x as f64 / x_resolution as f64, rows * y as f64 / y_resolution as f64, u);
+                let mut v_y = interpolation::bilinear_interpolate(cols * x as f64 / x_resolution as f64, rows * y as f64 / y_resolution as f64, v);
+
+                let length_scaler = 28.0;
+
+                let mag = (u_x*u_x + v_y*v_y).sqrt();
+                let scale = mag.max(15.0);
+                u_x = u_x / scale;
+                v_y = v_y / scale;
+
+                let (r, g, b) = Visualiser::grey_to_jet(mag, 0.0, 20.0);
+
+                let (px0, py0) = ( ((2.0 * x as f64)  / x_resolution as f64 ) - 1.0 , ((2.0 * y as f64) / y_resolution as f64) - 1.0 );
+                let (px1, py1) = ( ((2.0 * x as f64)  / x_resolution as f64 ) - 1.0 + u_x/length_scaler, ((2.0 * y as f64) / y_resolution as f64) - 1.0 + v_y/length_scaler );
+                let angle = (py0 - py1).atan2(px0 - px1);
+                let angle0 = angle + (PI / 2.0);
+                let angle1 = angle - (PI / 2.0);
+                let base = 0.005 * (0.4 + mag/length_scaler);
+                let (vx1, vy1) = (px0 + (base * f64::cos(angle0)), py0 + (base * f64::sin(angle0)));
+                let (vx2, vy2) = (px0 + (base * f64::cos(angle1)), py0 + (base * f64::sin(angle1)));
+
+                ps.push( Vertex {
+                    position: [ vx1, vy1 ],
+                    colour: [ r, g, b, 1.0 ]
+                } );
+                ps.push( Vertex {
+                    position: [ vx2, vy2 ],
+                    colour: [ r, g, b, 1.0 ]
+                } );
+                ps.push( Vertex {
+                    position: [ px1, py1 ],
+                    colour: [ r, g, b, 1.0 ]
+                } );
+
+                // ps.push( Vertex {
+                //     position: [ ((2.0 * x as f64)  / x_resolution as f64 ) - 1.0 , ((2.0 * y as f64) / y_resolution as f64) - 1.0 ],
+                //     colour: [ r, g, b, 1.0 ]
+                // } );
+                // ps.push( Vertex {
+                //     position: [ ((2.0 * x as f64)  / x_resolution as f64 ) - 1.0 + u_x/length_scaler, ((2.0 * y as f64) / y_resolution as f64) - 1.0 + v_y/length_scaler],
+                //     colour: [ r, g, b, 1.0 ]
+                // } );
+
+            }
+		}
+        //let c: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+
+        let vertex_buffer = VertexBuffer::new(&self.display, &ps).unwrap();
+        let indices = index::NoIndices(index::PrimitiveType::TrianglesList);
+
+        let mut target = self.display.draw();
+        target.clear_color(0.0, 0.0, 0.0, 1.0);
+
+        target.draw(&vertex_buffer, &indices, &self.program, &glium::uniforms::EmptyUniforms, &Default::default()).unwrap();
+        target.finish().unwrap();
+	}
+
+	pub fn draw_markers(&self, points: &Vec<(f64, f64)>, u: &Field, v: &Field) {
+        let width = v.columns as f64;
+        let height = u.rows as f64;
 
 		let mut ps = Vec::new();
 
 		for p in points {
 			let (x, y) = *p;
-			ps.push( Vertex { position: [ (2.0 * x  / width as f64 ) - 1.0 , (2.0 * y / height as f64) - 1.0 ] } )
+            let u_x = interpolation::bilinear_interpolate(x, y, u);
+            let v_y = interpolation::bilinear_interpolate(x, y, v);
+
+            let mag = (u_x*u_x + v_y*v_y).sqrt();
+            let scale = mag.max(20.0);
+
+            let (r, g, b) = Visualiser::grey_to_jet(mag, 0.0, 20.0);
+
+			ps.push( Vertex {
+                position: [ (2.0 * x  / width as f64 ) - 1.0 , (2.0 * y / height as f64) - 1.0 ],
+                colour: [ r, g, b, 1.0 ]
+             } )
 		}
 
 
-		let c: [f32; 4] = [1.0, 1.0, 0.0, 1.0];
+		//let c: [f32; 4] = [1.0, 1.0, 0.0, 1.0];
 		//let c1: [f32; 4] = if c { [1.0, 0.0, 0.0, 1.0] } else { [0.0, 0.0, 0.0, 1.0] };
 
 		let vertex_buffer = VertexBuffer::new(&self.display, &ps).unwrap();
@@ -551,9 +654,9 @@ impl Visualiser {
 		};
 
 		let mut target = self.display.draw();
-        target.clear_color(0.2, 0.2, 1.0, 1.0);
+        target.clear_color(0.0, 0.0, 0.0, 1.0);
 
-        target.draw(&vertex_buffer, &indices, &self.program, &uniform! { colour: c  }, &params).unwrap();
+        target.draw(&vertex_buffer, &indices, &self.program, &glium::uniforms::EmptyUniforms, &params).unwrap();
         target.finish().unwrap();
 	}
 

@@ -11,6 +11,8 @@ use integrators;
 use advection;
 use interpolation;
 
+use opencl_kernel::OpenCLKernel;
+use opencl;
 
 pub struct FluidSolver {
 	pub velocity_x: Field,
@@ -25,18 +27,18 @@ pub struct FluidSolver {
 	dx: f64,
 	fluid_density: f64,
     gravity: f64,
-    advection: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64, &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64),
+    advection: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64, &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64, kernel: Option<&OpenCLKernel>),
     interpolation: fn(mut x: f64, mut y: f64, field: &Field) -> f64,
     integration: fn(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64,
-    linear_solver: fn(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize)
+    linear_solver: fn(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize, kernel: Option<&OpenCLKernel>),
+    advect_kernel: OpenCLKernel,
+    linear_solver_kernel: OpenCLKernel
 }
 
 impl FluidSolver {
 	pub fn new(fluid_density: f64, rows: usize, columns: usize, dt: f64, dx: f64, gravity: f64) -> FluidSolver  {
 
-
-
- 		FluidSolver {
+ 		let mut f = FluidSolver {
  			velocity_x: Field::new(rows, columns+1, 0.0, 0.5),
  			velocity_y: Field::new(rows+1, columns, 0.5, 0.0),
 			density: Field::new(rows, columns, 0.5, 0.5),
@@ -53,7 +55,88 @@ impl FluidSolver {
             interpolation: interpolation::empty_interpolate,
             integration: integrators::empty,
             linear_solver: linear_solvers::empty,
- 		}
+            advect_kernel: OpenCLKernel::new("semi_lagrangian").unwrap(),
+            linear_solver_kernel: OpenCLKernel::new("relaxation").unwrap()
+ 		};
+
+        // field buffer
+        let padded_field_columns = columns + 32 - (((columns-1) % 32) + 1);
+        let padded_field_rows = rows + 32 - (((rows-1) % 32) + 1);
+
+        // no padding needed
+        if padded_field_columns == columns && padded_field_rows == rows {
+            f.advect_kernel.create_buffer(columns*rows, opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(columns*rows, opencl::cl::CL_MEM_READ_WRITE);
+            f.advect_kernel.create_buffer(f.velocity_x.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(f.velocity_y.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+        }
+        else {
+            f.advect_kernel.create_buffer(padded_field_columns*padded_field_rows, opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(padded_field_columns*padded_field_rows, opencl::cl::CL_MEM_READ_WRITE);
+            f.advect_kernel.create_buffer(padded_field_columns*padded_field_rows, opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(padded_field_columns*padded_field_rows, opencl::cl::CL_MEM_READ_ONLY);
+        }
+
+        // u buffer
+        let padded_u_columns = (columns+1) + 32 - ((((columns+1)-1) % 32) + 1);
+        let padded_u_rows = (rows) + 32 - ((((rows)-1) % 32) + 1);
+
+        // no padding needed
+        if padded_u_columns == f.velocity_x.columns && padded_u_rows == f.velocity_x.rows {
+            f.advect_kernel.create_buffer(f.velocity_x.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(f.velocity_x.field.len(), opencl::cl::CL_MEM_READ_WRITE);
+            f.advect_kernel.create_buffer(f.velocity_x.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(f.velocity_y.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+        }
+        else {
+            f.advect_kernel.create_buffer(padded_u_columns*padded_u_rows, opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(padded_u_columns*padded_u_rows, opencl::cl::CL_MEM_READ_WRITE);
+            f.advect_kernel.create_buffer(padded_u_columns*padded_u_rows, opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(padded_u_columns*padded_u_rows, opencl::cl::CL_MEM_READ_ONLY);
+        }
+
+        // v buffer
+        let padded_v_columns = (columns) + 32 - ((((columns)-1) % 32) + 1);
+        let padded_v_rows = (rows+1) + 32 - ((((rows+1)-1) % 32) + 1);
+
+        // no padding needed
+        if padded_v_columns == f.velocity_y.columns && padded_v_rows == f.velocity_y.rows {
+            f.advect_kernel.create_buffer(f.velocity_y.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(f.velocity_y.field.len(), opencl::cl::CL_MEM_READ_WRITE);
+            f.advect_kernel.create_buffer(f.velocity_x.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(f.velocity_y.field.len(), opencl::cl::CL_MEM_READ_ONLY);
+        }
+        else {
+            //println!("init {}", padded_v_columns*padded_v_rows);
+            // println!("init {}", f.velocity_x.field.len());
+            // println!("init {}", f.velocity_y.field.len());
+
+            f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_WRITE);
+            f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_ONLY);
+            f.advect_kernel.create_buffer(padded_v_columns*padded_v_rows, opencl::cl::CL_MEM_READ_ONLY);
+        }
+
+
+        //
+        // let s1 = padded_columns1 * padded_rows1;
+        // let s2 = padded_columns2 * padded_rows1; // u
+        // let s3 = padded_columns1 * padded_rows2; // v
+        //
+        // //println!("{}", s1 );
+        // f.advect_kernel.create_buffer(s1, opencl::cl::CL_MEM_READ_ONLY);
+        // f.advect_kernel.create_buffer(s1, opencl::cl::CL_MEM_READ_WRITE);
+        // f.advect_kernel.create_buffer(s2, opencl::cl::CL_MEM_READ_ONLY);
+        // f.advect_kernel.create_buffer(s2, opencl::cl::CL_MEM_READ_WRITE);
+        // f.advect_kernel.create_buffer(s3, opencl::cl::CL_MEM_READ_ONLY);
+        // f.advect_kernel.create_buffer(s3, opencl::cl::CL_MEM_READ_WRITE);
+
+
+        f.linear_solver_kernel.create_buffer((columns+2)*(rows*2), opencl::cl::CL_MEM_READ_WRITE);
+        f.linear_solver_kernel.create_buffer((columns+2)*(rows*2), opencl::cl::CL_MEM_READ_WRITE);
+        f.linear_solver_kernel.create_buffer((columns)*(rows), opencl::cl::CL_MEM_READ_WRITE);
+
+        f
  	}
 
     pub fn use_markers(mut self) -> Self {
@@ -65,7 +148,7 @@ impl FluidSolver {
         self
     }
 
-    pub fn advection(mut self, f: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64, &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64) ) -> Self {
+    pub fn advection(mut self, f: fn(&mut Field, &Field, &Field, f64, f64, &Fn(f64, f64, &Field) -> f64, &Fn(f64, f64, &Fn(f64, f64) -> f64, f64) -> f64, Option<&OpenCLKernel>) ) -> Self {
         self.advection = f;
         self
     }
@@ -80,7 +163,7 @@ impl FluidSolver {
         self
     }
 
-    pub fn linear_solver(mut self, f: fn(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize) ) -> Self {
+    pub fn linear_solver(mut self, f: fn(x: &mut Field, b: &Field, density: f64, dt: f64, dx: f64, limit: usize, kernel: Option<&OpenCLKernel>) ) -> Self {
         self.linear_solver = f;
         self
     }
@@ -88,8 +171,10 @@ impl FluidSolver {
 	// LP = D
 	// see diagram
 	pub fn pressure_solve(&mut self) {
-		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 1000 );
+		(self.linear_solver)( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600, Some(&self.linear_solver_kernel) );
         //linear_solvers::relaxation_fast_c( &mut self.pressure, &self.divergence, self.fluid_density, self.dt, self.dx, 600 );
+
+
 	}
 
 	pub fn solve(&mut self) {
@@ -138,9 +223,13 @@ impl FluidSolver {
         // println!("{}", self.velocity_x.columns);
         // println!("{}", self.velocity_x.rows);
 
-		(self.advection)(&mut self.velocity_x, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
-		(self.advection)(&mut self.velocity_y, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
-		(self.advection)(&mut self.density, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration);
+		(self.advection)(&mut self.velocity_x, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, Some(&self.advect_kernel));
+		(self.advection)(&mut self.velocity_y, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, Some(&self.advect_kernel));
+		(self.advection)(&mut self.density, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, Some(&self.advect_kernel));
+
+        // advection::semi_lagrangian_opencl(&mut self.velocity_x, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration, &self.advect_kernel);
+		// advection::semi_lagrangian_opencl(&mut self.velocity_y, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration,  &self.advect_kernel);
+		// advection::semi_lagrangian_opencl(&mut self.density, &u, &v, self.dt, self.dx, &self.interpolation, &self.integration,  &self.advect_kernel);
 
 		self.advect_particles();
 	}

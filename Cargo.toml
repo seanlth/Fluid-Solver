@@ -21,3 +21,6 @@ debug = true   # Controls whether the compiler passes `-g`
 
 [profile.bench]
 opt-level = 3
+
+[profile.test]
+opt-level = 3

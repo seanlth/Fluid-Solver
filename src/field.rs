@@ -1,6 +1,6 @@
 
 #[derive(Clone)]
-pub struct Field{
+pub struct Field {
 	pub field: Vec<f64>,
 	pub rows: usize,
 	pub columns: usize,

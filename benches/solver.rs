@@ -17,32 +17,45 @@ mod tests {
     use Fluids::linear_solvers;
     use test::Bencher;
 
-    const w: usize = 256;
-    const h: usize = 256;
+    const w: usize = 512;
+    const h: usize = 512;
 
-    #[bench]
-    fn bench_opencl(bencher: &mut Bencher) {
+    // #[bench]
+    // fn bench_linear_solver_opencl(bencher: &mut Bencher) {
+    //
+    //     let mut solver:FluidSolver = FluidSolver::new(1.0, w, h, 0.01, 1.0, 0.0)
+    //                                    .advection(advection::semi_lagrangian)
+    //                                    .interpolation(interpolation::bilinear_interpolate)
+    //                                    .integration(integrators::bogacki_shampine)
+    //                                    .linear_solver(linear_solvers::relaxation_opencl);
+    //
+    //     bencher.iter(|| solver.solve() );
+    // }
 
-        let mut solver:FluidSolver = FluidSolver::new(1.0, w, h, 0.01, 1.0, 0.0)
-                                       .advection(advection::semi_lagrangian)
-                                       .interpolation(interpolation::bilinear_interpolate)
-                                       .integration(integrators::bogacki_shampine)
-                                       .linear_solver(linear_solvers::relaxation_opencl);
+    // #[bench]
+    // fn bench_opencl(bencher: &mut Bencher) {
+    //
+    //
+    //     let mut solver:FluidSolver = FluidSolver::new(1.0, w, h, 0.01, 1.0, 0.0)
+    //                                    .advection(advection::semi_lagrangian)
+    //                                    .interpolation(interpolation::bilinear_interpolate)
+    //                                    .integration(integrators::bogacki_shampine)
+    //                                    .linear_solver(linear_solvers::relaxation_opencl);
+    //
+    //     bencher.iter(|| solver.solve() );
+    // }
 
-        bencher.iter(|| solver.solve() );
-    }
-
-    #[bench]
-    fn bench_fast_c(bencher: &mut Bencher) {
-
-        let mut solver:FluidSolver = FluidSolver::new(1.0, w, h, 0.01, 1.0, 0.0)
-                                       .advection(advection::semi_lagrangian)
-                                       .interpolation(interpolation::bilinear_interpolate)
-                                       .integration(integrators::bogacki_shampine)
-                                       .linear_solver(linear_solvers::relaxation_fast_c);
-
-        bencher.iter(|| solver.solve() );
-    }
+    // #[bench]
+    // fn bench_fast_c(bencher: &mut Bencher) {
+    //
+    //     let mut solver:FluidSolver = FluidSolver::new(1.0, w, h, 0.01, 1.0, 0.0)
+    //                                    .advection(advection::semi_lagrangian)
+    //                                    .interpolation(interpolation::bilinear_interpolate)
+    //                                    .integration(integrators::bogacki_shampine)
+    //                                    .linear_solver(linear_solvers::relaxation_fast_c);
+    //
+    //     bencher.iter(|| solver.solve() );
+    // }
 
     // #[bench]
     // fn bench_relaxation_c(bencher: &mut Bencher) {
