@@ -1,4 +1,4 @@
-data = Import["/Users/Seanlth/Documents/College\ Notes/4.Fourth\ Year/Thesis/Implementation/Fluids/data.dat", "Data"];
+data = Import["data.dat", "Data"];
 ps = Partition[data[[1]], 2];
 ps1 = Partition[ps, 2];
 field = ListVectorPlot[ps1]
