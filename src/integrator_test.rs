@@ -22,7 +22,7 @@ pub fn bogacki_shampine<F>(x: f64, t: f64, f: F, dt: f64) -> f64
     let k3 = f(x + (3.0 * dt / 4.0)*k1, t + (3.0 * dt / 4.0));
 
     x + (2.0 * k1 + 3.0 * k2 + 4.0 * k3) * (dt / 9.0)
-}   
+}
 
 fn test() {
     let mut x = 1.0;

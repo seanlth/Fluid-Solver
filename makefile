@@ -6,7 +6,7 @@ build:
 	rm linear_solver.o
 	cp libsolver.a target/debug/deps/
 	mv libsolver.a target/release/deps/
-	cargo build
+	cargo build --release
 
 clean:
 	cargo clean
@@ -16,3 +16,6 @@ run:
 
 bench:
 	cargo bench
+
+example:
+	cargo test --release

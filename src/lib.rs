@@ -11,3 +11,4 @@ pub mod visualiser;
 pub mod field;
 pub mod interpolation;
 pub mod advection;
+pub mod opencl_kernel;

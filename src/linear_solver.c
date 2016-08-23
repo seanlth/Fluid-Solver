@@ -17,7 +17,8 @@ void relaxation_fast_ffi( double* array, double* b, unsigned int w, unsigned int
     double scale = (dt / ( density * dx * dx ));
     int a = w+2;
 
-    for ( int i = 0; i < limit; i++ ) {
+    int i = 0;
+    for ( ; i < limit; i++ ) {
         double error_delta = 0.0;
         for ( int r = 1; r < h+1; r++ ) {
             for ( int c = 1; c < w+1; c++ ) {
@@ -51,24 +52,29 @@ void relaxation_fast_ffi( double* array, double* b, unsigned int w, unsigned int
         new_x = x;
         x = temp;
 
-        //if (error_delta < epsilon) { break; }
+        //if (error_delta < epsilon) { printf("Iteration %d \n", i); break; }
     }
 
-    // after odd number of iteration result is in x, x -> new_x
-    if ( limit % 2 == 1 ) {
-        memcpy( array, x, sizeof(double) * (h+2) * (w+2) );
-        free(x);
+    if ( i != limit ) {
+        if ( (i+1) % 2 == 1) {
+            memcpy( array, x, sizeof(double) * (h+2) * (w+2) );
+            free(x);
+        }
+        else {
+            free(new_x);
+        }
     }
     else {
-        free(new_x);
-    }
 
-    // for (int i = 0; i < h+2; i++) {
-    //     for (int j = 0; j < w+2; j++) {
-    //         printf("%f ", array[i*(w+2) + j]);
-    //     }
-    //     printf("\n");
-    // }
+    // after odd number of iteration result is in x, x -> new_x
+        if ( limit % 2 == 1 ) {
+            memcpy( array, x, sizeof(double) * (h+2) * (w+2) );
+            free(x);
+        }
+        else {
+            free(new_x);
+        }
+    }
 
 }
 

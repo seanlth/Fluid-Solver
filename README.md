@@ -13,7 +13,10 @@ Code repository for my Final Year Project in Trinity College, Dublin.
     * ```make build``` to build the project
     * ```make run``` to run the solver
 
-3. Benchmarks
+3. Examples
+    * ```make example``` to build the examples
+
+4. Benchmarks
     * ```make bench``` to run benchmarks
 
 ## Crates
