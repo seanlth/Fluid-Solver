@@ -1,6 +1,5 @@
 # Staggered-Grid Fluid Solver in Rust
 
-Code repository for my Final Year Project in Trinity College, Dublin.
 
 ## Building source
 
