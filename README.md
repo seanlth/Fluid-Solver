@@ -1,5 +1,6 @@
 # Staggered-Grid Fluid Solver in Rust
 
+![screenshot](https://github.com/seanlth/Fluid-Solver/blob/master/images/vector_field800.png)
 
 ## Building source
 
