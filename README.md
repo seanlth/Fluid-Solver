@@ -11,7 +11,6 @@
 
 2. Building
     * ```make build``` to build the project
-    * ```make run``` to run the solver
 
 3. Examples
     * ```make example``` to build the examples
@@ -37,17 +36,10 @@ Density, pressure and marker-particle visualisation methods have been implemente
 
 ## Project layout
 
-### `main.rs`
-* Entry point of the solver and contains
-* An instantiation of the solver
-* The main loop containing the solve step
-* Visualisation step
 
 ### `fluid_solver.rs`
-* Ties together each file and contains
-* The various fields associated with a fluid
-* Functions that manage the solver
-* Functions which carry out each stage of the solve
+* Ties together all the algorithms required
+* Contains the various fields associated with a fluid and the functions that manage the solver
 
 ### `advection.rs`
 * Upwind advection implementation
@@ -68,8 +60,8 @@ Density, pressure and marker-particle visualisation methods have been implemente
 * Rust, C, OpenCL implementations of Jacobi relaxation
 
 ### `visualiser.rs`
-* density visualisation
-* inverse density visualisation
-* density visualisation with jet colourmap
-* pressure visualisation with jet colourmap
+* Density visualisation
+* Inverse density visualisation
+* Density visualisation with jet colourmap
+* Pressure visualisation with jet colourmap
 * Marker-particle visualisation
