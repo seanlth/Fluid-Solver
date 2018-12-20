@@ -1,23 +1,16 @@
 [package]
-name = "Fluids"
+name = "fluids"
 version = "0.1.0"
 authors = ["hargados <hargados@tcd.ie>"]
 
 [dependencies]
-glium = "0.13.5"
-crossbeam = "0.2.5"
-scoped_threadpool = "0.1.7"
-
-[dependencies.opencl]
-path = "/Users/Seanlth/Projects/Rust/rust-opencl"
-
-
-[dependencies.lodepng]
-path = "/Users/Seanlth/Projects/Rust/lodepng-rust"
+glium = "0.22.0"
+scoped_threadpool = "0.1.9"
+lodepng = "2.4.2"
 
 
 [profile.dev]
-debug = true   # Controls whether the compiler passes `-g`
+debug = true   
 
 [profile.bench]
 opt-level = 3
