@@ -7,3 +7,4 @@ lodepng.c
 lodepng.h
 *.dat
 *.a
+*.swp

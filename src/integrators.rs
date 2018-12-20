@@ -1,7 +1,5 @@
-use interpolation;
-use field::Field;
 
-pub fn empty(x: f64, t: f64, f: &Fn(f64, f64) -> f64, dt: f64) -> f64 {
+pub fn empty(_: f64, _: f64, _: &Fn(f64, f64) -> f64, _: f64) -> f64 {
     0.0
 }
 
